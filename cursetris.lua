@@ -60,13 +60,53 @@ pieces = {
 
 local stdscr = nil
 
+local x_size = 11
+local y_size = 20
+
+-- board[x][y] = <piece index at (x, y)>
+local board = {}
+
 
 -- Internal functions.
 
+local function init_curses()
+  -- Start up curses.
+  curses.initscr()
+  curses.cbreak()
+  curses.echo(false)  -- not noecho
+  curses.nl(false)    -- not nonl
+
+  -- Set up colors.
+  curses.start_color()
+  if not curses.has_colors() then
+    curses.endwin()
+    print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
+    os.exit(1)
+  end
+  curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_RED)
+  curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLUE)
+
+  -- Set up our standard screen.
+  stdscr = curses.stdscr()
+  stdscr:clear()
+end
+
+local function init()
+  init_curses()
+
+  for x = 1, x_size do
+    board[x] = {}
+    for y = 1, y_size do
+      board[x][y] = 0
+    end
+  end
+
+end
+
 local function draw_board()
   stdscr:attron(curses.color_pair(2))
-  for x = 1, 11 do
-    for y = 1, 20 do
+  for x = 1, x_size do
+    for y = 1, y_size do
       stdscr:attron(curses.color_pair(2 - ((x + y) % 2)))
       stdscr:mvaddstr(y, 2 * x + 0, ' ')
       stdscr:mvaddstr(y, 2 * x + 1, ' ')
@@ -81,25 +121,9 @@ local function ord(c)
   return tostring(c):byte(1)
 end
 
-curses.initscr()
-curses.cbreak()
-curses.echo(false)  -- not noecho
-curses.nl(false)    -- not nonl
-curses.start_color()
-if not curses.has_colors() then
-  curses.endwin()
-  print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
-  os.exit(1)
-end
-
-curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_RED)
-curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLUE)
+init()
 
 
-stdscr = curses.stdscr()
-
-
-stdscr:clear()
 --stdscr:mvaddstr(15,20,'print out curses table (y/n) ? ')
 draw_board()
 
