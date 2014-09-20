@@ -77,6 +77,7 @@ local board = {}
 -- quantum downward piece movements. The player is free
 -- to move the piece faster than this.
 local fall_interval = 0.7
+local last_fall_at  = nil  -- Timestamp of the last fall event.
 
 local fall_piece      -- Which piece is falling.
 local fall_x, fall_y  -- Where the falling piece is.
@@ -126,6 +127,8 @@ local function init_curses()
   curses.cbreak()
   curses.echo(false)  -- not noecho
   curses.nl(false)    -- not nonl
+  local invisible = 0
+  curses.curs_set(invisible)  -- Hide the cursor.
 
   init_colors()
 
@@ -141,6 +144,8 @@ local function init()
   -- Early calls to math.random() seem to give nearby values for nearby seeds,
   -- so let's call it a few times to lower the correlation.
   for i = 1,10 do math.random() end
+
+  last_fall_at = now()
 
   init_curses()
 
@@ -215,6 +220,11 @@ while true do
   end
 
   -- Move the piece down if the time is right.
+  local timestamp = now()
+  if (timestamp - last_fall_at) > fall_interval then
+    fall_y = fall_y + 1
+    last_fall_at = timestamp
+  end
 
   draw_board()
 end
