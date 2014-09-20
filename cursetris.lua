@@ -162,6 +162,9 @@ local function draw_point(x, y, c)
   stdscr:mvaddstr(y, 2 * x + 1, ' ')
 end
 
+-- pi      = piece index (1-#pieces)
+-- rot_num = rotation number (1-4)
+-- px, py  = x, y coordinates in piece space
 local function get_piece_part(pi, rot_num, px, py)
   local p_str = pieces[pi][rot_num]
   local index = px + 4 * (py - 1)
