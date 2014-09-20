@@ -13,6 +13,8 @@ local posix  = require 'posix'
 ------------------------------------------------------------------
 
 -- pieces[shape_num][rot_num] = <string value of piece shape>
+-- The hot spot is marked as * to help us be aware that this is
+-- the point stored as (fall_x, fall_y).
 
 pieces = {
   {
@@ -54,7 +56,7 @@ pieces = {
   {
     '....' ..
     '..x.' ..
-    'xx*.' ..
+    'x*x.' ..
     '....'
   },
 }
@@ -79,12 +81,19 @@ local fall_interval = 0.7
 local fall_piece      -- Which piece is falling.
 local fall_x, fall_y  -- Where the falling piece is.
 
-local colors = { black = 1, blue = 2, cyan = 3, green = 4,
-                 magenta = 5, red = 6, white = 7, yellow = 8 }
+local colors = { white = 1, blue = 2, cyan = 3, green = 4,
+                 magenta = 5, red = 6, yellow = 7, black = 8 }
 
 ------------------------------------------------------------------
 -- Internal functions.
 ------------------------------------------------------------------
+
+-- Accepts a one-byte string as input and returns
+-- the numeric value of the byte.
+-- This is similar to Python's ord function.
+local function ord(c)
+  return tostring(c):byte(1)
+end
 
 local function now()
   timeval = posix.gettimeofday()
@@ -153,20 +162,33 @@ local function draw_point(x, y, c)
   stdscr:mvaddstr(y, 2 * x + 1, ' ')
 end
 
+local function get_piece_part(pi, rot_num, px, py)
+  local p_str = pieces[pi][rot_num]
+  local index = px + 4 * (py - 1)
+  return p_str:byte(index) ~= ord('.')
+end
+
 local function draw_board()
   stdscr:attron(curses.color_pair(2))
   for x = 1, x_size do
     for y = 1, y_size do
-      draw_point(x, y, board[x][y])
+      color = board[x][y]
+      if color == 0 then color = colors.black end
+      draw_point(x, y, color)
     end
   end
-end
 
--- Accepts a one-byte string as input and returns
--- the numeric value of the byte.
--- This is similar to Python's ord function.
-local function ord(c)
-  return tostring(c):byte(1)
+  -- Draw the currently-falling piece.
+  local rot_num = 1
+  set_color(fall_piece)
+  for px = 1, 4 do
+    for py = 1, 4 do
+      p_part = get_piece_part(fall_piece, rot_num, px, py)
+      if p_part then
+        draw_point(fall_x + px - 2, fall_y + py - 3)
+      end
+    end
+  end
 end
 
 local function end_game()
