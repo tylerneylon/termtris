@@ -180,7 +180,18 @@ local function get_piece_part(pi, rot_num, px, py)
 end
 
 local function draw_board()
-  stdscr:attron(curses.color_pair(2))
+  -- Draw the border.
+  set_color(colors.white)
+  for x = 0, x_size + 1, x_size + 1 do
+    for y = 1, y_size do
+      draw_point(x, y)
+    end
+  end
+  for x = 0, x_size + 1 do
+    draw_point(x, y_size + 1)
+  end
+
+  -- Draw the non-falling pieces.
   for x = 1, x_size do
     for y = 1, y_size do
       color = board[x][y]
