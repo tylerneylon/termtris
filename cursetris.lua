@@ -82,8 +82,10 @@ local last_fall_at  = nil  -- Timestamp of the last fall event.
 local fall_piece      -- Which piece is falling.
 local fall_x, fall_y  -- Where the falling piece is.
 
+-- These are useful for calling set_color.
 local colors = { white = 1, blue = 2, cyan = 3, green = 4,
                  magenta = 5, red = 6, yellow = 7, black = 8 }
+local text_color = 9
 
 ------------------------------------------------------------------
 -- Internal functions.
@@ -113,6 +115,7 @@ local function init_colors()
     curses_color = curses['COLOR_' .. k:upper()]
     curses.init_pair(v, curses_color, curses_color)
   end
+  curses.init_pair(text_color, curses.COLOR_BLACK, curses.COLOR_WHITE)
 end
 
 -- Accepts integer values corresponding to the 'colors' table
@@ -204,6 +207,12 @@ local function end_game()
   os.exit(0)
 end
 
+local function sleep(interval)
+  sec = math.floor(interval)
+  usec = math.floor((interval - sec) * 1e9)
+  posix.nanosleep(sec, usec)
+end
+
 
 ------------------------------------------------------------------
 -- Main.
@@ -211,8 +220,11 @@ end
 
 init()
 
+local num_cycles = 0
+
 -- Main loop.
 while true do
+  num_cycles = num_cycles + 1
   -- Handle key presses.
   local c = stdscr:getch()  -- Nonblocking.
   if c then
@@ -227,55 +239,18 @@ while true do
   end
 
   draw_board()
+
+  -- Don't kill the cpu.
+  -- Choose sleep_time <= 0.1 so that an integer multiple of
+  -- sleep_time hits the fall_interval.
+  local sleep_time = fall_interval / math.ceil(fall_interval / 0.1)
+  if sleep_time > fall_interval then sleep_time = fall_interval / 2.0 end
+  sleep(sleep_time)
+
+  -- Uncomment the lines below to debug main loop timing.
+  --[[
+  set_color(text_color)
+  stdscr:mvaddstr(40, 10, 'sleep_time=' .. tostring(sleep_time))
+  stdscr:mvaddstr(41, 10, 'num_cyles=' .. tostring(num_cycles))
+  --]]
 end
-
-
---stdscr:mvaddstr(15,20,'print out curses table (y/n) ? ')
-draw_board()
-
-
-a_str = [[
-┌─┐
-└─┘
-]]
-
-b_str = [[
-┌──┐
-│  │
-└──┘
-]]
-
-c_str = [[
-⏧⎸
-⎾⏋
-⎿h
-]]
-
-
---stdscr:attron(curses.color_pair(1))
---stdscr:mvaddstr(16, 20, 'hi')
-
-
-stdscr:refresh()
-
-while true do
-  local c = stdscr:getch()
-  if c == ord('q') then
-    curses.endwin()
-    print('c=' .. tostring(c))
-    print('type(c)=' .. type(c))
-    print('(c == 113)=' .. tostring(c == 113))
-    os.exit(0)
-  end
-  os.execute('sleep 0.5')
-end
-local c = stdscr:getch()
-if c < 256 then c = string.char(c) end
-curses.endwin()
-if c == 'y' then
-    table.sort(a)
-    for i,k in ipairs(a) do print(type(curses[k])..'  '..k) end
-end
-
-print('c=' .. tostring(c))
-
