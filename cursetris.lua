@@ -5,9 +5,12 @@
 --
 
 local curses = require 'curses'
+local posix  = require 'posix'
 
 
+------------------------------------------------------------------
 -- Piece shapes.
+------------------------------------------------------------------
 
 -- pieces[shape_num][rot_num] = <string value of piece shape>
 
@@ -56,7 +59,9 @@ pieces = {
   },
 }
 
+------------------------------------------------------------------
 -- Declare internal globals.
+------------------------------------------------------------------
 
 local stdscr = nil
 
@@ -66,8 +71,45 @@ local y_size = 20
 -- board[x][y] = <piece index at (x, y)>
 local board = {}
 
+-- The fall_interval is the number of seconds between
+-- quantum downward piece movements. The player is free
+-- to move the piece faster than this.
+local fall_interval = 0.7
 
+local fall_piece      -- Which piece is falling.
+local fall_x, fall_y  -- Where the falling piece is.
+
+local colors = { black = 1, blue = 2, cyan = 3, green = 4,
+                 magenta = 5, red = 6, white = 7, yellow = 8 }
+
+------------------------------------------------------------------
 -- Internal functions.
+------------------------------------------------------------------
+
+local function now()
+  timeval = posix.gettimeofday()
+  return timeval.sec + timeval.usec * 1e-6
+end
+
+local function init_colors()
+  curses.start_color()
+  if not curses.has_colors() then
+    curses.endwin()
+    print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
+    os.exit(1)
+  end
+
+  for k, v in pairs(colors) do
+    curses_color = curses['COLOR_' .. k:upper()]
+    curses.init_pair(v, curses_color, curses_color)
+  end
+end
+
+-- Accepts integer values corresponding to the 'colors' table
+-- created above. For example, call 'set_color(colors.black)'.
+local function set_color(c)
+  stdscr:attron(curses.color_pair(c))
+end
 
 local function init_curses()
   -- Start up curses.
@@ -76,22 +118,21 @@ local function init_curses()
   curses.echo(false)  -- not noecho
   curses.nl(false)    -- not nonl
 
-  -- Set up colors.
-  curses.start_color()
-  if not curses.has_colors() then
-    curses.endwin()
-    print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
-    os.exit(1)
-  end
-  curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_RED)
-  curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLUE)
+  init_colors()
 
   -- Set up our standard screen.
   stdscr = curses.stdscr()
+  stdscr:nodelay(true)  -- Make getch nonblocking.
+  stdscr:keypad()       -- Correctly catch arrow key presses.
   stdscr:clear()
 end
 
 local function init()
+  math.randomseed(now())
+  -- Early calls to math.random() seem to give nearby values for nearby seeds,
+  -- so let's call it a few times to lower the correlation.
+  for i = 1,10 do math.random() end
+
   init_curses()
 
   for x = 1, x_size do
@@ -101,15 +142,22 @@ local function init()
     end
   end
 
+  fall_piece = math.random(#pieces)
+  fall_x, fall_y = 6, 3
+
+end
+
+local function draw_point(x, y, c)
+  if c then set_color(c) end
+  stdscr:mvaddstr(y, 2 * x + 0, ' ')
+  stdscr:mvaddstr(y, 2 * x + 1, ' ')
 end
 
 local function draw_board()
   stdscr:attron(curses.color_pair(2))
   for x = 1, x_size do
     for y = 1, y_size do
-      stdscr:attron(curses.color_pair(2 - ((x + y) % 2)))
-      stdscr:mvaddstr(y, 2 * x + 0, ' ')
-      stdscr:mvaddstr(y, 2 * x + 1, ' ')
+      draw_point(x, y, board[x][y])
     end
   end
 end
@@ -121,7 +169,30 @@ local function ord(c)
   return tostring(c):byte(1)
 end
 
+local function end_game()
+  curses.endwin()
+  os.exit(0)
+end
+
+
+------------------------------------------------------------------
+-- Main.
+------------------------------------------------------------------
+
 init()
+
+-- Main loop.
+while true do
+  -- Handle key presses.
+  local c = stdscr:getch()  -- Nonblocking.
+  if c then
+    if c == ord('q') then end_game() end
+  end
+
+  -- Move the piece down if the time is right.
+
+  draw_board()
+end
 
 
 --stdscr:mvaddstr(15,20,'print out curses table (y/n) ? ')
@@ -151,7 +222,6 @@ c_str = [[
 
 
 stdscr:refresh()
-stdscr:nodelay(true)
 
 while true do
   local c = stdscr:getch()
