@@ -152,10 +152,15 @@ local function init()
 
   init_curses()
 
-  for x = 1, x_size do
+  -- The board includes boundaries.
+  for x = 0, x_size + 1 do
     board[x] = {}
-    for y = 1, y_size do
-      board[x][y] = 0
+    for y = 1, y_size + 1 do
+      val = 0
+      if x == 0 or x == x_size + 1 or y == y_size + 1 then
+        val = colors.white
+      end
+      board[x][y] = val
     end
   end
 
@@ -180,20 +185,9 @@ local function get_piece_part(pi, rot_num, px, py)
 end
 
 local function draw_board()
-  -- Draw the border.
-  set_color(colors.white)
-  for x = 0, x_size + 1, x_size + 1 do
-    for y = 1, y_size do
-      draw_point(x, y)
-    end
-  end
-  for x = 0, x_size + 1 do
-    draw_point(x, y_size + 1)
-  end
-
   -- Draw the non-falling pieces.
-  for x = 1, x_size do
-    for y = 1, y_size do
+  for x = 0, x_size + 1 do
+    for y = 1, y_size + 1 do
       color = board[x][y]
       if color == 0 then color = colors.black end
       draw_point(x, y, color)
