@@ -81,6 +81,7 @@ local last_fall_at  = nil  -- Timestamp of the last fall event.
 
 local fall_piece      -- Which piece is falling.
 local fall_x, fall_y  -- Where the falling piece is.
+local fall_rot
 
 -- These are useful for calling set_color.
 local colors = { white = 1, blue = 2, cyan = 3, green = 4,
@@ -115,7 +116,7 @@ local function init_colors()
     curses_color = curses['COLOR_' .. k:upper()]
     curses.init_pair(v, curses_color, curses_color)
   end
-  curses.init_pair(text_color, curses.COLOR_BLACK, curses.COLOR_WHITE)
+  curses.init_pair(text_color, curses.COLOR_WHITE, curses.COLOR_BLACK)
 end
 
 -- Accepts integer values corresponding to the 'colors' table
@@ -143,7 +144,7 @@ local function init_curses()
 end
 
 local function init()
-  math.randomseed(now())
+  --math.randomseed(now()) -- TEMP
   -- Early calls to math.random() seem to give nearby values for nearby seeds,
   -- so let's call it a few times to lower the correlation.
   for i = 1,10 do math.random() end
@@ -166,7 +167,7 @@ local function init()
 
   fall_piece = math.random(#pieces)
   fall_x, fall_y = 6, 3
-
+  fall_rot = 1
 end
 
 local function draw_point(x, y, c)
@@ -180,8 +181,44 @@ end
 -- px, py  = x, y coordinates in piece space
 local function get_piece_part(pi, rot_num, px, py)
   local p_str = pieces[pi][rot_num]
+  set_color(text_color)
   local index = px + 4 * (py - 1)
-  return p_str:byte(index) ~= ord('.')
+  --return p_str:byte(index) ~= ord('.')
+  ---[[
+  ret = p_str:byte(index) ~= ord('.')
+  if px == 1 and py == 4 then
+    stdscr:mvaddstr(7, 50, 'p_str=' .. p_str)
+    stdscr:mvaddstr(8, 50, tostring(ret))
+    stdscr:mvaddstr(9, 50, '(px, py)=(' .. px .. ', ' .. py .. ')  ')
+    stdscr:mvaddstr(10, 50, 'index=' .. index)
+    stdscr:mvaddstr(11, 50, 'p_str:byte(index)=' .. p_str:byte(index))
+    stdscr:mvaddstr(12, 50, 'ord(\'.\')=' .. ord('.'))
+  end
+  return ret
+  --]]
+end
+
+-- Returns true iff the move was valid.
+local function move_fall_piece_if_valid(new_x, new_y, new_rot)
+  set_color(text_color)
+  stdscr:mvaddstr(1, 50, 'move_fall_piece_if_valid(' .. new_x .. ', ' .. new_y .. ', ' .. new_rot .. ')')
+  for x = 1, 4 do
+    for y = 1, 4 do
+      stdscr:mvaddstr(2, 50, '(x,y)=(' .. x .. ', ' .. y .. ') ')
+      p_part = get_piece_part(fall_piece, new_rot, x, y)
+      bx, by = new_x + x - 2, new_y + y - 3
+      stdscr:mvaddstr(3, 50, '(bx, by)=(' .. bx .. ', ' .. by .. ') ')
+      stdscr:mvaddstr(4, 50, 'p_part=' .. tostring(p_part))
+      if p_part and (board[bx] == nil or board[bx][by] > 0) then
+        stdscr:mvaddstr(5, 50, 'false')
+        stdscr:mvaddstr(5, 60, 'p_part=' .. tostring(p_part) .. ' board[bx]=' .. tostring(board[bx]))
+        return false
+      end
+    end
+  end
+  fall_x, fall_y, fall_rot = new_x, new_y, new_rot
+  stdscr:mvaddstr(5, 20, 'true ')
+  return true
 end
 
 local function draw_board()
@@ -191,6 +228,10 @@ local function draw_board()
       color = board[x][y]
       if color == 0 then color = colors.black end
       draw_point(x, y, color)
+      if x == x_size + 1 then
+        set_color(text_color)
+        stdscr:mvaddstr(y, 2 * x + 2, tostring(y))
+      end
     end
   end
 
@@ -201,6 +242,7 @@ local function draw_board()
     for py = 1, 4 do
       p_part = get_piece_part(fall_piece, rot_num, px, py)
       if p_part then
+        set_color(fall_piece)  -- TEMP
         draw_point(fall_x + px - 2, fall_y + py - 3)
       end
     end
@@ -218,6 +260,15 @@ local function sleep(interval)
   posix.nanosleep(sec, usec)
 end
 
+local function handle_key(key)
+  if key == ord('q') then end_game() end
+  if key == curses.KEY_LEFT then
+    move_fall_piece_if_valid(fall_x - 1, fall_y, fall_rot)
+  end
+  if key == curses.KEY_RIGHT then
+    move_fall_piece_if_valid(fall_x + 1, fall_y, fall_rot)
+  end
+end
 
 ------------------------------------------------------------------
 -- Main.
@@ -232,23 +283,23 @@ while true do
   num_cycles = num_cycles + 1
   -- Handle key presses.
   local c = stdscr:getch()  -- Nonblocking.
-  if c then
-    if c == ord('q') then end_game() end
-  end
+  if c then handle_key(c) end
 
   -- Move the piece down if the time is right.
   local timestamp = now()
   if (timestamp - last_fall_at) > fall_interval then
-    fall_y = fall_y + 1
+    move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot)
+    -- fall_y = fall_y + 1
     last_fall_at = timestamp
   end
 
   draw_board()
+  stdscr:refresh()
 
   -- Don't kill the cpu.
   -- Choose sleep_time <= 0.1 so that an integer multiple of
   -- sleep_time hits the fall_interval.
-  local sleep_time = fall_interval / math.ceil(fall_interval / 0.1)
+  local sleep_time = fall_interval / math.ceil(fall_interval / 0.001)
   if sleep_time > fall_interval then sleep_time = fall_interval / 2.0 end
   sleep(sleep_time)
 
