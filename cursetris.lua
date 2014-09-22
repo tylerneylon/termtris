@@ -159,7 +159,7 @@ local function init()
     for y = 1, y_size + 1 do
       val = 0
       if x == 0 or x == x_size + 1 or y == y_size + 1 then
-        val = colors.white
+        val = -1
       end
       board[x][y] = val
     end
@@ -171,9 +171,14 @@ local function init()
 end
 
 local function draw_point(x, y, c)
-  if c then set_color(c) end
-  stdscr:mvaddstr(y, 2 * x + 0, ' ')
-  stdscr:mvaddstr(y, 2 * x + 1, ' ')
+  point_char = ' '
+  if c and c > 0 then set_color(c) end
+  if c and c == -1 then
+    set_color(text_color)
+    point_char = '|'
+  end
+  stdscr:mvaddstr(y, 2 * x + 0, point_char)
+  stdscr:mvaddstr(y, 2 * x + 1, point_char)
 end
 
 -- pi      = piece index (1-#pieces)
@@ -209,7 +214,7 @@ local function move_fall_piece_if_valid(new_x, new_y, new_rot)
       bx, by = new_x + x - 2, new_y + y - 3
       stdscr:mvaddstr(3, 50, '(bx, by)=(' .. bx .. ', ' .. by .. ') ')
       stdscr:mvaddstr(4, 50, 'p_part=' .. tostring(p_part))
-      if p_part and (board[bx] == nil or board[bx][by] > 0) then
+      if p_part and (board[bx] == nil or board[bx][by] ~= 0) then
         stdscr:mvaddstr(5, 50, 'false')
         stdscr:mvaddstr(5, 60, 'p_part=' .. tostring(p_part) .. ' board[bx]=' .. tostring(board[bx]))
         return false
