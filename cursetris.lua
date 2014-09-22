@@ -384,8 +384,47 @@ local function lock_falling_piece()
   end
 end
 
+local function remove_line(remove_y)
+  set_color(text_color)
+  stdscr:mvaddstr(19, 50, 'remove_line(' .. remove_y .. ')')
+  for y = remove_y, 2, -1 do
+    for x = 1, x_size do
+      board[x][y] = board[x][y - 1]
+    end
+  end
+end
+
+local function line_is_full(y)
+  set_color(text_color)
+  stdscr:mvaddstr(16, 50, 'line_is_full(' .. y .. ')')
+  if y > y_size then
+    stdscr:mvaddstr(17, 50, 'false as y > y_size      ')
+    return false
+  end
+  for x = 1, x_size do
+    if board[x][y] == 0 then
+      stdscr:mvaddstr(17, 50, 'false as board[' .. x .. '][' .. y .. '] == 0   ')
+      return false
+    end
+  end
+  stdscr:mvaddstr(17, 50, 'true           ')
+  return true
+end
+
+-- This checks the 4 lines affected by the current fall piece,
+-- which we expect to have just been locked by lock_falling_piece.
+local function check_for_full_lines()
+  set_color(text_color)
+  stdscr:mvaddstr(14, 50, 'Checking for full lines from ' ..
+                  tostring(fall_y - 2) .. ' to ' .. tostring(fall_y + 1))
+  for y = fall_y - 2, fall_y + 1 do
+    if line_is_full(y) then remove_line(y) end
+  end
+end
+
 local function falling_piece_hit_bottom()
   lock_falling_piece()
+  check_for_full_lines()
   new_falling_piece()
 end
 
