@@ -269,16 +269,6 @@ local function sleep(interval)
   posix.nanosleep(sec, usec)
 end
 
-local function handle_key(key)
-  if key == ord('q') then end_game() end
-  if key == curses.KEY_LEFT then
-    move_fall_piece_if_valid(fall_x - 1, fall_y, fall_rot)
-  end
-  if key == curses.KEY_RIGHT then
-    move_fall_piece_if_valid(fall_x + 1, fall_y, fall_rot)
-  end
-end
-
 local function lock_falling_piece()
   for x = 1, 4 do
     for y = 1, 4 do
@@ -289,6 +279,27 @@ local function lock_falling_piece()
     end
   end
 end
+
+local function falling_piece_hit_bottom()
+  lock_falling_piece()
+  new_falling_piece()
+end
+
+local function handle_key(key)
+  if key == ord('q') then end_game() end
+  if key == curses.KEY_LEFT then
+    move_fall_piece_if_valid(fall_x - 1, fall_y, fall_rot)
+  end
+  if key == curses.KEY_RIGHT then
+    move_fall_piece_if_valid(fall_x + 1, fall_y, fall_rot)
+  end
+  if key == curses.KEY_DOWN then
+    while move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) do
+    end
+    falling_piece_hit_bottom()
+  end
+end
+
 
 ------------------------------------------------------------------
 -- Main.
@@ -309,8 +320,7 @@ while true do
   local timestamp = now()
   if (timestamp - last_fall_at) > fall_interval then
     if not move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) then
-      lock_falling_piece()
-      new_falling_piece()
+      falling_piece_hit_bottom()
     end
     -- fall_y = fall_y + 1
     last_fall_at = timestamp
