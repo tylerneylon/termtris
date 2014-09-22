@@ -125,6 +125,12 @@ local function set_color(c)
   stdscr:attron(curses.color_pair(c))
 end
 
+local function new_falling_piece()
+  fall_piece = math.random(#pieces)
+  fall_x, fall_y = 6, 3
+  fall_rot = 1
+end
+
 local function init_curses()
   -- Start up curses.
   curses.initscr()
@@ -165,9 +171,7 @@ local function init()
     end
   end
 
-  fall_piece = math.random(#pieces)
-  fall_x, fall_y = 6, 3
-  fall_rot = 1
+  new_falling_piece()
 end
 
 local function draw_point(x, y, c)
@@ -210,8 +214,8 @@ local function move_fall_piece_if_valid(new_x, new_y, new_rot)
   for x = 1, 4 do
     for y = 1, 4 do
       stdscr:mvaddstr(2, 50, '(x,y)=(' .. x .. ', ' .. y .. ') ')
-      p_part = get_piece_part(fall_piece, new_rot, x, y)
-      bx, by = new_x + x - 2, new_y + y - 3
+      local p_part = get_piece_part(fall_piece, new_rot, x, y)
+      local bx, by = new_x + x - 2, new_y + y - 3
       stdscr:mvaddstr(3, 50, '(bx, by)=(' .. bx .. ', ' .. by .. ') ')
       stdscr:mvaddstr(4, 50, 'p_part=' .. tostring(p_part))
       if p_part and (board[bx] == nil or board[bx][by] ~= 0) then
@@ -275,6 +279,17 @@ local function handle_key(key)
   end
 end
 
+local function lock_falling_piece()
+  for x = 1, 4 do
+    for y = 1, 4 do
+      local bx, by = fall_x + x - 2, fall_y + y - 3
+      if get_piece_part(fall_piece, fall_rot, x, y) then
+        board[bx][by] = fall_piece
+      end
+    end
+  end
+end
+
 ------------------------------------------------------------------
 -- Main.
 ------------------------------------------------------------------
@@ -293,7 +308,10 @@ while true do
   -- Move the piece down if the time is right.
   local timestamp = now()
   if (timestamp - last_fall_at) > fall_interval then
-    move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot)
+    if not move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) then
+      lock_falling_piece()
+      new_falling_piece()
+    end
     -- fall_y = fall_y + 1
     last_fall_at = timestamp
   end
