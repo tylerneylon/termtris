@@ -238,6 +238,13 @@ local function new_falling_piece()
   fall_rot = 1
 end
 
+-- Refresh the user-visible level and lines values.
+local function update_stats()
+  set_color(text_color)
+  stdscr:mvaddstr(5, 2 * x_size + 7, 'Level ' .. level)
+  stdscr:mvaddstr(7, 2 * x_size + 7, 'Lines ' .. lines)
+end
+
 local function init_curses()
   -- Start up curses.
   curses.initscr()
@@ -257,7 +264,7 @@ local function init_curses()
 end
 
 local function init()
-  --math.randomseed(now()) -- TEMP
+  math.randomseed(now())
   -- Early calls to math.random() seem to give nearby values for nearby seeds,
   -- so let's call it a few times to lower the correlation.
   for i = 1,10 do math.random() end
@@ -279,6 +286,8 @@ local function init()
   end
 
   new_falling_piece()
+
+  update_stats()
 end
 
 local function draw_point(x, y, c)
@@ -362,12 +371,20 @@ local function lock_falling_piece()
   end
 end
 
+local function level_up()
+  level = level + 1
+  fall_interval = fall_interval * 0.8
+end
+
 local function remove_line(remove_y)
   for y = remove_y, 2, -1 do
     for x = 1, x_size do
       board[x][y] = board[x][y - 1]
     end
   end
+  lines = lines + 1
+  if lines % 10 == 0 then level_up() end
+  update_stats()
 end
 
 local function line_is_full(y)
