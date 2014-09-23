@@ -297,41 +297,21 @@ local function get_piece_part(pi, rot_num, px, py)
   local p_str = pieces[pi][rot_num]
   set_color(text_color)
   local index = px + 4 * (py - 1)
-  --return p_str:byte(index) ~= ord('.')
-  ---[[
-  ret = p_str:byte(index) ~= ord('.')
-  if px == 1 and py == 4 then
-    stdscr:mvaddstr(7, 50, 'p_str=' .. p_str)
-    stdscr:mvaddstr(8, 50, tostring(ret))
-    stdscr:mvaddstr(9, 50, '(px, py)=(' .. px .. ', ' .. py .. ')  ')
-    stdscr:mvaddstr(10, 50, 'index=' .. index)
-    stdscr:mvaddstr(11, 50, 'p_str:byte(index)=' .. p_str:byte(index))
-    stdscr:mvaddstr(12, 50, 'ord(\'.\')=' .. ord('.'))
-  end
-  return ret
-  --]]
+  return p_str:byte(index) ~= ord('.')
 end
 
 -- Returns true iff the move was valid.
 local function move_fall_piece_if_valid(new_x, new_y, new_rot)
-  set_color(text_color)
-  stdscr:mvaddstr(1, 50, 'move_fall_piece_if_valid(' .. new_x .. ', ' .. new_y .. ', ' .. new_rot .. ')')
   for x = 1, 4 do
     for y = 1, 4 do
-      stdscr:mvaddstr(2, 50, '(x,y)=(' .. x .. ', ' .. y .. ') ')
       local p_part = get_piece_part(fall_piece, new_rot, x, y)
       local bx, by = new_x + x - 2, new_y + y - 3
-      stdscr:mvaddstr(3, 50, '(bx, by)=(' .. bx .. ', ' .. by .. ') ')
-      stdscr:mvaddstr(4, 50, 'p_part=' .. tostring(p_part))
       if p_part and (board[bx] == nil or board[bx][by] ~= 0) then
-        stdscr:mvaddstr(5, 50, 'false')
-        stdscr:mvaddstr(5, 60, 'p_part=' .. tostring(p_part) .. ' board[bx]=' .. tostring(board[bx]))
         return false
       end
     end
   end
   fall_x, fall_y, fall_rot = new_x, new_y, new_rot
-  stdscr:mvaddstr(5, 20, 'true ')
   return true
 end
 
@@ -342,10 +322,6 @@ local function draw_board()
       color = board[x][y]
       if color == 0 then color = colors.black end
       draw_point(x, y, color)
-      if x == x_size + 1 then
-        set_color(text_color)
-        stdscr:mvaddstr(y, 2 * x + 2, tostring(y))
-      end
     end
   end
 
@@ -385,8 +361,6 @@ local function lock_falling_piece()
 end
 
 local function remove_line(remove_y)
-  set_color(text_color)
-  stdscr:mvaddstr(19, 50, 'remove_line(' .. remove_y .. ')')
   for y = remove_y, 2, -1 do
     for x = 1, x_size do
       board[x][y] = board[x][y - 1]
@@ -395,28 +369,18 @@ local function remove_line(remove_y)
 end
 
 local function line_is_full(y)
-  set_color(text_color)
-  stdscr:mvaddstr(16, 50, 'line_is_full(' .. y .. ')')
-  if y > y_size then
-    stdscr:mvaddstr(17, 50, 'false as y > y_size      ')
-    return false
-  end
+  if y > y_size then return false end
   for x = 1, x_size do
     if board[x][y] == 0 then
-      stdscr:mvaddstr(17, 50, 'false as board[' .. x .. '][' .. y .. '] == 0   ')
       return false
     end
   end
-  stdscr:mvaddstr(17, 50, 'true           ')
   return true
 end
 
 -- This checks the 4 lines affected by the current fall piece,
 -- which we expect to have just been locked by lock_falling_piece.
 local function check_for_full_lines()
-  set_color(text_color)
-  stdscr:mvaddstr(14, 50, 'Checking for full lines from ' ..
-                  tostring(fall_y - 2) .. ' to ' .. tostring(fall_y + 1))
   for y = fall_y - 2, fall_y + 1 do
     if line_is_full(y) then remove_line(y) end
   end
