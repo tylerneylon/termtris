@@ -285,6 +285,15 @@ local function new_falling_piece()
   if not move_fall_piece_if_valid(fall_x, fall_y, fall_rot) then game_over() end
 end
 
+local function update_screen_coords()
+  screen_coords.x_size = curses.cols()
+  screen_coords.y_size = curses.lines()
+
+  local win_width = 2 * (x_size + 2) + 16
+  screen_coords.x_margin = math.floor((screen_coords.x_size - win_width) / 2)
+  screen_coords.x_labels = screen_coords.x_margin + win_width - 10
+end
+
 local function init_curses()
   -- Start up curses.
   curses.initscr()
@@ -301,13 +310,6 @@ local function init_curses()
   stdscr:nodelay(true)  -- Make getch nonblocking.
   stdscr:keypad()       -- Correctly catch arrow key presses.
   stdscr:clear()
-
-  screen_coords.x_size = curses.cols()
-  screen_coords.y_size = curses.lines()
-
-  local win_width = 2 * (x_size + 2) + 16
-  screen_coords.x_margin = math.floor((screen_coords.x_size - win_width) / 2)
-  screen_coords.x_labels = screen_coords.x_margin + win_width - 10
 end
 
 local function init()
@@ -333,8 +335,6 @@ local function init()
   end
 
   new_falling_piece()
-
-  update_stats()
 end
 
 local function draw_point(x, y, c)
@@ -491,7 +491,11 @@ while true do
 
   lower_piece_at_right_time()
 
+  -- Drawing.
+  stdscr:erase()
+  update_screen_coords()
   draw_board()
+  update_stats()
   stdscr:refresh()
 
   -- Don't kill the cpu.
