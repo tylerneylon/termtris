@@ -183,6 +183,8 @@ local board = {}
 -- to move the piece faster than this.
 local fall_interval = 0.7
 local last_fall_at  = nil  -- Timestamp of the last fall event.
+local level = 1
+local lines = 0
 
 local fall_piece      -- Which piece is falling.
 local fall_x, fall_y  -- Where the falling piece is.
@@ -381,9 +383,14 @@ end
 -- This checks the 4 lines affected by the current fall piece,
 -- which we expect to have just been locked by lock_falling_piece.
 local function check_for_full_lines()
+  local any_removed = false
   for y = fall_y - 2, fall_y + 1 do
-    if line_is_full(y) then remove_line(y) end
+    if line_is_full(y) then
+      remove_line(y)
+      any_removed = true
+    end
   end
+  if any_removed then curses.flash() end
 end
 
 local function falling_piece_hit_bottom()
