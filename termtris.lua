@@ -198,6 +198,8 @@ local  end_color = 10
 
 local game_state = 'playing'
 
+local screen_coords = {}
+
 ------------------------------------------------------------------
 -- Internal functions.
 ------------------------------------------------------------------
@@ -239,10 +241,10 @@ end
 -- Refresh the user-visible level and lines values.
 local function update_stats()
   set_color(text_color)
-  stdscr:mvaddstr(5, 2 * x_size + 7, 'Level ' .. level)
-  stdscr:mvaddstr(7, 2 * x_size + 7, 'Lines ' .. lines)
+  stdscr:mvaddstr(5, screen_coords.x_labels, 'Level ' .. level)
+  stdscr:mvaddstr(7, screen_coords.x_labels, 'Lines ' .. lines)
   if game_state == 'over' then
-    stdscr:mvaddstr(10, 2 * x_size + 7, 'Game Over')
+    stdscr:mvaddstr(10, screen_coords.x_labels, 'Game Over')
   end
 end
 
@@ -299,6 +301,13 @@ local function init_curses()
   stdscr:nodelay(true)  -- Make getch nonblocking.
   stdscr:keypad()       -- Correctly catch arrow key presses.
   stdscr:clear()
+
+  screen_coords.x_size = curses.cols()
+  screen_coords.y_size = curses.lines()
+
+  local win_width = 2 * (x_size + 2) + 16
+  screen_coords.x_margin = math.floor((screen_coords.x_size - win_width) / 2)
+  screen_coords.x_labels = screen_coords.x_margin + win_width - 10
 end
 
 local function init()
@@ -336,8 +345,9 @@ local function draw_point(x, y, c)
     if game_state == 'over' then set_color(end_color) end
     point_char = '|'
   end
-  stdscr:mvaddstr(y, 2 * x + 0, point_char)
-  stdscr:mvaddstr(y, 2 * x + 1, point_char)
+  local x_offset = screen_coords.x_margin
+  stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
+  stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
 end
 
 local function draw_board()
