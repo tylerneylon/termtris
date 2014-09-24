@@ -12,9 +12,9 @@ local posix  = require 'posix'
 -- Piece shapes.
 ------------------------------------------------------------------
 
--- pieces[shape_num][rot_num] = <string value of piece shape>
--- The hot spot is marked as * to help us be aware that this is
--- the point stored as (fall_x, fall_y).
+-- At runtime, pieces[shape_num][rot_num] is a 2D array p so that
+-- p[x][y] is either 0 or 1, indicating where the piece lives.
+-- The final form of the pieces array is set up by init_pieces.
 
 pieces = {
   {
