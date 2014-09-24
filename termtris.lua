@@ -424,17 +424,5 @@ while true do
   show_next_piece()
   stdscr:refresh()
 
-  -- Don't kill the cpu.
-  -- Choose sleep_time <= 0.1 so that an integer multiple of
-  -- sleep_time hits the fall_interval.
-  local sleep_time = fall_interval / math.ceil(fall_interval / 0.001)
-  if sleep_time > fall_interval then sleep_time = fall_interval / 2.0 end
-  sleep(sleep_time)
-
-  -- Uncomment the lines below to debug main loop timing.
-  --[[
-  set_color(text_color)
-  stdscr:mvaddstr(40, 10, 'sleep_time=' .. tostring(sleep_time))
-  stdscr:mvaddstr(41, 10, 'num_cyles=' .. tostring(num_cycles))
-  --]]
+  sleep(0.002)  -- Be responsive but avoid killing the cpu.
 end
