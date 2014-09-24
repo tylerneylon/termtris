@@ -54,7 +54,7 @@ local stdscr = nil
 local x_size = 11
 local y_size = 20
 
--- board[x][y] = <piece index at (x, y)>
+-- board[x][y] = <piece index at (x, y)>; 0 = empty, -1 = border.
 local board = {}
 
 -- The fall_interval is the number of seconds between
@@ -294,12 +294,6 @@ local function sleep(interval)
   posix.nanosleep(sec, usec)
 end
 
-local function lock_falling_piece()
-  for x, y in piece_coords(fall_piece, fall_rot, fall_x, fall_y) do
-    board[x][y] = fall_piece
-  end
-end
-
 local function remove_line(remove_y)
   for y = remove_y, 2, -1 do
     for x = 1, x_size do
@@ -325,7 +319,7 @@ local function line_is_full(y)
 end
 
 -- This checks the 4 lines affected by the current fall piece,
--- which we expect to have just been locked by lock_falling_piece.
+-- which we expect to have just been added to the board.
 local function check_for_full_lines()
   local any_removed = false
   for y = fall_y + 1, fall_y + 4 do
@@ -338,7 +332,9 @@ local function check_for_full_lines()
 end
 
 local function falling_piece_hit_bottom()
-  lock_falling_piece()
+  for x, y in piece_coords(fall_piece, fall_rot, fall_x, fall_y) do
+    board[x][y] = fall_piece  -- Lock the falling piece in place.
+  end
   check_for_full_lines()
   new_falling_piece()
 end
