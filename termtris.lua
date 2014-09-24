@@ -182,7 +182,7 @@ end
 
 local function new_falling_piece()
   fall_piece = next_piece
-  fall_x, fall_y = 6, 0
+  fall_x, fall_y = 4, 0
   fall_rot = 1
   if not move_fall_piece_if_valid(fall_x, fall_y, fall_rot) then
     game_state = 'over'
