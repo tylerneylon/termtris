@@ -18,152 +18,32 @@ local posix  = require 'posix'
 
 pieces = {
   {
-    '....' ..
-    '.x..' ..
-    'x*x.' ..
-    '....' ,
-
-    '....' ..
-    '.x..' ..
-    '.*x.' ..
-    '.x..' ,
-
-    '....' ..
-    '....' ..
-    'x*x.' ..
-    '.x..' ,
-
-    '....' ..
-    '.x..' ..
-    'x*..' ..
-    '.x..' ,
+    {0, 1, 0},
+    {1, 1, 1}
   },
   {
-    '....' ..
-    '.xx.' ..
-    'x*..' ..
-    '....' ,
-
-    '....' ..
-    '.x..' ..
-    '.*x.' ..
-    '..x.' ,
-
-    '....' ..
-    '.xx.' ..
-    'x*..' ..
-    '....' ,
-
-    '....' ..
-    '.x..' ..
-    '.*x.' ..
-    '..x.' ,
+    {0, 1, 1},
+    {1, 1, 0}
+  }, 
+  {
+    {1, 1, 0},
+    {0, 1, 1}
   },
   {
-    '....' ..
-    'xx..' ..
-    '.*x.' ..
-    '....' ,
-
-    '....' ..
-    '..x.' ..
-    '.*x.' ..
-    '.x..' ,
-
-    '....' ..
-    'xx..' ..
-    '.*x.' ..
-    '....' ,
-
-    '....' ..
-    '..x.' ..
-    '.*x.' ..
-    '.x..' ,
+    {1, 1, 1, 1}
   },
   {
-    '....' ..
-    '....' ..
-    'x*xx' ..
-    '....' ,
-
-    '.x..' ..
-    '.x..' ..
-    '.*..' ..
-    '.x..' ,
-
-    '....' ..
-    '....' ..
-    'x*xx' ..
-    '....' ,
-
-    '.x..' ..
-    '.x..' ..
-    '.*..' ..
-    '.x..' ,
+    {1, 1},
+    {1, 1}
   },
   {
-    '....' ..
-    '.xx.' ..
-    '.*x.' ..
-    '....' ,
-
-    '....' ..
-    '.xx.' ..
-    '.*x.' ..
-    '....' ,
-
-    '....' ..
-    '.xx.' ..
-    '.*x.' ..
-    '....' ,
-
-    '....' ..
-    '.xx.' ..
-    '.*x.' ..
-    '....' ,
+    {1, 0, 0},
+    {1, 1, 1}
   },
   {
-    '....' ..
-    '.x..' ..
-    '.*xx' ..
-    '....' ,
-
-    '....' ..
-    '.xx.' ..
-    '.*..' ..
-    '.x..' ,
-
-    '....' ..
-    '....' ..
-    'x*x.' ..
-    '..x.' ,
-
-    '.x..' ..
-    '.x..' ..
-    'x*..' ..
-    '....' ,
-  },
-  {
-    '....' ..
-    '..x.' ..
-    'x*x.' ..
-    '....' ,
-
-    '.x..' ..
-    '.x..' ..
-    '.*x.' ..
-    '....' ,
-
-    '....' ..
-    '....' ..
-    'x*x.' ..
-    'x...' ,
-
-    '....' ..
-    'xx..' ..
-    '.*..' ..
-    '.x..' ,
-  },
+    {0, 0, 1},
+    {1, 1, 1}
+  }
 }
 
 ------------------------------------------------------------------
@@ -250,14 +130,20 @@ local function update_stats()
   end
 end
 
--- pi      = piece index (1-#pieces)
--- rot_num = rotation number (1-4)
--- px, py  = x, y coordinates in piece space
-local function get_piece_part(pi, rot_num, px, py)
-  local p_str = pieces[pi][rot_num]
-  set_color(text_color)
-  local index = px + 4 * (py - 1)
-  return p_str:byte(index) ~= ord('.')
+-- This function iterates over all x, y coords of a piece
+-- anchored at the given px, py coordinates. Example use:
+-- for x, y in piece_coords(1, 1, 3, 4) do draw_at(x, y) end
+local function piece_coords(pi, rot_num, px, py)
+  local p = pieces[pi][rot_num]
+  local x, y = 0, 1
+  local x_end, y_end = #p + 1, #p[1] + 1
+  return function ()
+    repeat
+      x = x + 1
+      if x == x_end then x, y = 1, y + 1 end
+    until y == y_end or p[x][y] == 1
+    if y ~= y_end then return px + x, py + y end
+  end
 end
 
 local function draw_point(x, y, c)
@@ -280,15 +166,9 @@ local function show_next_piece()
   stdscr:mvaddstr(2, screen_coords.x_labels, '----------')
   stdscr:mvaddstr(7, screen_coords.x_labels, '---Next---')
 
-  for x = 1, 4 do
-    for y = 1, 4 do
-      if get_piece_part(next_piece, 1, x, y) then
-        set_color(next_piece)
-        draw_point(x_size + 5 + x, y + 2)
-      end
-    end
+  for x, y in piece_coords(next_piece, 1, x_size + 5, 3) do
+    draw_point(x, y, next_piece)
   end
-
 end
 
 local function game_over()
@@ -298,14 +178,8 @@ end
 
 -- Returns true iff the move was valid.
 local function move_fall_piece_if_valid(new_x, new_y, new_rot)
-  for x = 1, 4 do
-    for y = 1, 4 do
-      local p_part = get_piece_part(fall_piece, new_rot, x, y)
-      local bx, by = new_x + x - 2, new_y + y - 3
-      if p_part and (board[bx] == nil or board[bx][by] ~= 0) then
-        return false
-      end
-    end
+  for x, y in piece_coords(fall_piece, new_rot, new_x, new_y) do
+    if board[x] and board[x][y] ~= 0 then return false end
   end
   fall_x, fall_y, fall_rot = new_x, new_y, new_rot
   return true
@@ -313,7 +187,7 @@ end
 
 local function new_falling_piece()
   fall_piece = next_piece
-  fall_x, fall_y = 6, 3
+  fall_x, fall_y = 6, 0
   fall_rot = 1
   if not move_fall_piece_if_valid(fall_x, fall_y, fall_rot) then game_over() end
   next_piece = math.random(#pieces)
@@ -346,6 +220,31 @@ local function init_curses()
   stdscr:clear()
 end
 
+function rotate_piece(p)
+  local new_piece = {}
+  local y_end = #p[1] + 1  -- Chosen so that y_end - y is still in [1, y_max].
+
+  for y = 1, #p[1] do
+    new_piece[y] = {}
+    for x = 1, #p do
+      new_piece[y][x] = p[x][y_end - y]
+    end
+  end
+
+  return new_piece
+end
+
+local function init_pieces()
+  for pi = 1, #pieces do
+    local p = pieces[pi]
+    pieces[pi] = {}
+    for rot_num = 1, 4 do
+      p = rotate_piece(p)
+      pieces[pi][rot_num] = p
+    end
+  end
+end
+
 local function init()
   math.randomseed(now())
   -- Early calls to math.random() seem to give nearby values for nearby seeds,
@@ -354,6 +253,7 @@ local function init()
 
   last_fall_at = now()
 
+  init_pieces()
   init_curses()
 
   -- The board includes boundaries.
@@ -390,14 +290,8 @@ local function draw_board()
   end
 
   -- Draw the currently-falling piece.
-  for px = 1, 4 do
-    for py = 1, 4 do
-      p_part = get_piece_part(fall_piece, fall_rot, px, py)
-      if p_part then
-        set_color(fall_piece)
-        draw_point(fall_x + px - 2, fall_y + py - 3)
-      end
-    end
+  for x, y in piece_coords(fall_piece, fall_rot, fall_x, fall_y) do
+    draw_point(x, y, fall_piece)
   end
 end
 
@@ -413,13 +307,8 @@ local function sleep(interval)
 end
 
 local function lock_falling_piece()
-  for x = 1, 4 do
-    for y = 1, 4 do
-      local bx, by = fall_x + x - 2, fall_y + y - 3
-      if get_piece_part(fall_piece, fall_rot, x, y) then
-        board[bx][by] = fall_piece
-      end
-    end
+  for x, y in piece_coords(fall_piece, fall_rot, fall_x, fall_y) do
+    board[x][y] = fall_piece
   end
 end
 
@@ -453,7 +342,7 @@ end
 -- which we expect to have just been locked by lock_falling_piece.
 local function check_for_full_lines()
   local any_removed = false
-  for y = fall_y - 2, fall_y + 1 do
+  for y = fall_y + 1, fall_y + 4 do
     if line_is_full(y) then
       remove_line(y)
       any_removed = true
