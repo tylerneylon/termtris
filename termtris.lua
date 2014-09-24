@@ -190,6 +190,8 @@ local fall_piece      -- Which piece is falling.
 local fall_x, fall_y  -- Where the falling piece is.
 local fall_rot
 
+local next_piece
+
 -- These are useful for calling set_color.
 local colors = { white = 1, blue = 2, cyan = 3, green = 4,
                  magenta = 5, red = 6, yellow = 7, black = 8 }
@@ -241,16 +243,11 @@ end
 -- Refresh the user-visible level and lines values.
 local function update_stats()
   set_color(text_color)
-  stdscr:mvaddstr(5, screen_coords.x_labels, 'Level ' .. level)
-  stdscr:mvaddstr(7, screen_coords.x_labels, 'Lines ' .. lines)
+  stdscr:mvaddstr( 9, screen_coords.x_labels, 'Level ' .. level)
+  stdscr:mvaddstr(11, screen_coords.x_labels, 'Lines ' .. lines)
   if game_state == 'over' then
-    stdscr:mvaddstr(10, screen_coords.x_labels, 'Game Over')
+    stdscr:mvaddstr(14, screen_coords.x_labels, 'Game Over')
   end
-end
-
-local function game_over()
-  game_state = 'over'
-  update_stats()
 end
 
 -- pi      = piece index (1-#pieces)
@@ -261,6 +258,40 @@ local function get_piece_part(pi, rot_num, px, py)
   set_color(text_color)
   local index = px + 4 * (py - 1)
   return p_str:byte(index) ~= ord('.')
+end
+
+local function draw_point(x, y, c)
+  point_char = ' '
+  if c and c > 0 then set_color(c) end
+  if c and c == -1 then
+    set_color(text_color)
+    if game_state == 'over' then set_color(end_color) end
+    point_char = '|'
+  end
+  local x_offset = screen_coords.x_margin
+  stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
+  stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
+end
+
+local function show_next_piece()
+  set_color(text_color)
+  stdscr:mvaddstr(2, screen_coords.x_labels, '----------')
+  stdscr:mvaddstr(7, screen_coords.x_labels, '---Next---')
+
+  for x = 1, 4 do
+    for y = 1, 4 do
+      if get_piece_part(next_piece, 1, x, y) then
+        set_color(next_piece)
+        draw_point(x_size + 5 + x, y + 2)
+      end
+    end
+  end
+
+end
+
+local function game_over()
+  game_state = 'over'
+  update_stats()
 end
 
 -- Returns true iff the move was valid.
@@ -279,10 +310,11 @@ local function move_fall_piece_if_valid(new_x, new_y, new_rot)
 end
 
 local function new_falling_piece()
-  fall_piece = math.random(#pieces)
+  fall_piece = next_piece
   fall_x, fall_y = 6, 3
   fall_rot = 1
   if not move_fall_piece_if_valid(fall_x, fall_y, fall_rot) then game_over() end
+  next_piece = math.random(#pieces)
 end
 
 local function update_screen_coords()
@@ -334,20 +366,8 @@ local function init()
     end
   end
 
+  next_piece = math.random(#pieces)
   new_falling_piece()
-end
-
-local function draw_point(x, y, c)
-  point_char = ' '
-  if c and c > 0 then set_color(c) end
-  if c and c == -1 then
-    set_color(text_color)
-    if game_state == 'over' then set_color(end_color) end
-    point_char = '|'
-  end
-  local x_offset = screen_coords.x_margin
-  stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
-  stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
 end
 
 local function draw_board()
@@ -496,6 +516,7 @@ while true do
   update_screen_coords()
   draw_board()
   update_stats()
+  show_next_piece()
   stdscr:refresh()
 
   -- Don't kill the cpu.
