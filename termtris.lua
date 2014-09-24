@@ -215,7 +215,6 @@ local function init_curses()
   stdscr = curses.stdscr()
   stdscr:nodelay(true)  -- Make getch nonblocking.
   stdscr:keypad()       -- Correctly catch arrow key presses.
-  stdscr:clear()
 end
 
 function rotate_piece(p)
