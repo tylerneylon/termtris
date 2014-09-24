@@ -1,5 +1,5 @@
 #!/usr/local/bin/luajit
--- cursetris.lua
+-- termtris.lua
 --
 -- A tetris-inspired game made using the curses library.
 --
