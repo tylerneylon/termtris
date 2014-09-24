@@ -171,11 +171,6 @@ local function show_next_piece()
   end
 end
 
-local function game_over()
-  game_state = 'over'
-  update_stats()
-end
-
 -- Returns true iff the move was valid.
 local function move_fall_piece_if_valid(new_x, new_y, new_rot)
   for x, y in piece_coords(fall_piece, new_rot, new_x, new_y) do
@@ -189,7 +184,10 @@ local function new_falling_piece()
   fall_piece = next_piece
   fall_x, fall_y = 6, 0
   fall_rot = 1
-  if not move_fall_piece_if_valid(fall_x, fall_y, fall_rot) then game_over() end
+  if not move_fall_piece_if_valid(fall_x, fall_y, fall_rot) then
+    game_state = 'over'
+    update_stats()
+  end
   next_piece = math.random(#pieces)
 end
 
