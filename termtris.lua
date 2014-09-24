@@ -267,6 +267,8 @@ local function draw_point(x, y, c)
     set_color(text_color)
     if game_state == 'over' then set_color(end_color) end
     point_char = '|'
+  elseif game_state == 'paused' then
+    return  -- Only draw border pieces while paused.
   end
   local x_offset = screen_coords.x_margin
   stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
@@ -380,6 +382,13 @@ local function draw_board()
     end
   end
 
+  if game_state == 'paused' then
+    set_color(text_color)
+    local x = screen_coords.x_margin + x_size - 1
+    stdscr:mvaddstr(math.floor(y_size / 2), x, 'paused')
+    return
+  end
+
   -- Draw the currently-falling piece.
   for px = 1, 4 do
     for py = 1, 4 do
@@ -461,8 +470,15 @@ end
 
 local function handle_key(key)
   if key == ord('q') then end_game() end
-  -- Don't respond to arrow keys if the game is over.
-  if game_state == 'over' then return end
+
+  if key == ord('p') then
+    local switch = {playing = 'paused', paused = 'playing'}
+    if switch[game_state] then game_state = switch[game_state] end
+  end
+  
+  -- Don't respond to arrow keys if the game is over or paused.
+  if game_state ~= 'playing' then return end
+
   if key == curses.KEY_LEFT then
     move_fall_piece_if_valid(fall_x - 1, fall_y, fall_rot)
   end
@@ -480,8 +496,8 @@ local function handle_key(key)
 end
 
 local function lower_piece_at_right_time()
-  -- This function does nothing if the game is over.
-  if game_state == 'over' then return end
+  -- This function does nothing if the game is paused or over.
+  if game_state ~= 'playing' then return end
 
   local timestamp = now()
   if (timestamp - last_fall_at) > fall_interval then
