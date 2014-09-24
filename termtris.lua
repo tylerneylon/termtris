@@ -7,7 +7,6 @@
 local curses = require 'curses'
 local posix  = require 'posix'
 
-
 ------------------------------------------------------------------
 -- Piece shapes.
 ------------------------------------------------------------------
@@ -244,9 +243,6 @@ end
 
 local function init()
   math.randomseed(now())
-  -- Early calls to math.random() seem to give nearby values for nearby seeds,
-  -- so let's call it a few times to lower the correlation.
-  for i = 1,10 do math.random() end
 
   last_fall_at = now()
 
@@ -292,11 +288,6 @@ local function draw_board()
   end
 end
 
-local function end_game()
-  curses.endwin()
-  os.exit(0)
-end
-
 local function sleep(interval)
   sec = math.floor(interval)
   usec = math.floor((interval - sec) * 1e9)
@@ -309,11 +300,6 @@ local function lock_falling_piece()
   end
 end
 
-local function level_up()
-  level = level + 1
-  fall_interval = fall_interval * 0.8
-end
-
 local function remove_line(remove_y)
   for y = remove_y, 2, -1 do
     for x = 1, x_size do
@@ -321,7 +307,10 @@ local function remove_line(remove_y)
     end
   end
   lines = lines + 1
-  if lines % 10 == 0 then level_up() end
+  if lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
+    level = level + 1
+    fall_interval = fall_interval * 0.8
+  end
   update_stats()
 end
 
@@ -355,7 +344,10 @@ local function falling_piece_hit_bottom()
 end
 
 local function handle_key(key)
-  if key == ord('q') then end_game() end
+  if key == ord('q') then
+    curses.endwin()
+    os.exit(0)
+  end
 
   if key == ord('p') then
     local switch = {playing = 'paused', paused = 'playing'}
@@ -372,8 +364,7 @@ local function handle_key(key)
     move_fall_piece_if_valid(fall_x + 1, fall_y, fall_rot)
   end
   if key == curses.KEY_DOWN then
-    while move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) do
-    end
+    while move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) do end
     falling_piece_hit_bottom()
   end
   if key == curses.KEY_UP then
@@ -390,11 +381,9 @@ local function lower_piece_at_right_time()
     if not move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) then
       falling_piece_hit_bottom()
     end
-    -- fall_y = fall_y + 1
     last_fall_at = timestamp
   end
 end
-
 
 ------------------------------------------------------------------
 -- Main.
@@ -402,11 +391,9 @@ end
 
 init()
 
-local num_cycles = 0
-
 -- Main loop.
 while true do
-  num_cycles = num_cycles + 1
+
   -- Handle key presses.
   local c = stdscr:getch()  -- Nonblocking.
   if c then handle_key(c) end
