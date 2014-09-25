@@ -16,31 +16,24 @@ local posix  = require 'posix'
 -- The final form of the pieces array is set up by init_pieces.
 
 pieces = {
-  {
-    {0, 1, 0},
+  { {0, 1, 0},
     {1, 1, 1}
   },
-  {
-    {0, 1, 1},
+  { {0, 1, 1},
     {1, 1, 0}
   }, 
-  {
-    {1, 1, 0},
+  { {1, 1, 0},
     {0, 1, 1}
   },
-  {
-    {1, 1, 1, 1}
+  { {1, 1, 1, 1}
   },
-  {
-    {1, 1},
+  { {1, 1},
     {1, 1}
   },
-  {
-    {1, 0, 0},
+  { {1, 0, 0},
     {1, 1, 1}
   },
-  {
-    {0, 0, 1},
+  { {0, 0, 1},
     {1, 1, 1}
   }
 }
@@ -62,8 +55,7 @@ local board = {}
 -- to move the piece faster than this.
 local fall_interval = 0.7
 local last_fall_at  = nil  -- Timestamp of the last fall event.
-local level = 1
-local lines = 0
+local stats = {level = 1, lines = 0, score = 0}
 
 local fall_piece      -- Which piece is falling.
 local fall_x, fall_y  -- Where the falling piece is.
@@ -119,13 +111,14 @@ local function set_color(c)
   stdscr:attron(curses.color_pair(c))
 end
 
--- Refresh the user-visible level and lines values.
+-- Refresh the user-visible stats such as level and score.
 local function update_stats()
   set_color(text_color)
-  stdscr:mvaddstr( 9, screen_coords.x_labels, 'Level ' .. level)
-  stdscr:mvaddstr(11, screen_coords.x_labels, 'Lines ' .. lines)
+  stdscr:mvaddstr( 9, screen_coords.x_labels, 'Level ' .. stats.level)
+  stdscr:mvaddstr(11, screen_coords.x_labels, 'Lines ' .. stats.lines)
+  stdscr:mvaddstr(13, screen_coords.x_labels, 'Score ' .. stats.score)
   if game_state == 'over' then
-    stdscr:mvaddstr(14, screen_coords.x_labels, 'Game Over')
+    stdscr:mvaddstr(16, screen_coords.x_labels, 'Game Over')
   end
 end
 
@@ -300,9 +293,9 @@ local function remove_line(remove_y)
       board[x][y] = board[x][y - 1]
     end
   end
-  lines = lines + 1
-  if lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
-    level = level + 1
+  stats.lines = stats.lines + 1
+  if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
+    stats.level = stats.level + 1
     fall_interval = fall_interval * 0.8
   end
   update_stats()
@@ -321,14 +314,15 @@ end
 -- This checks the 4 lines affected by the current fall piece,
 -- which we expect to have just been added to the board.
 local function check_for_full_lines()
-  local any_removed = false
+  local num_removed = 0
   for y = fall_y + 1, fall_y + 4 do
     if line_is_full(y) then
       remove_line(y)
-      any_removed = true
+      num_removed = num_removed + 1
     end
   end
-  if any_removed then curses.flash() end
+  if num_removed > 0 then curses.flash() end
+  stats.score = stats.score + num_removed * num_removed
 end
 
 local function falling_piece_hit_bottom()
