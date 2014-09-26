@@ -239,15 +239,15 @@ local function init()
   init_shapes()
   init_curses()
 
-  -- The board includes boundaries.
+  -- Set the board; 0 for empty; -1 for border cells.
   for x = 0, board_size.x + 1 do
-    board[x] = {}
     for y = 1, board_size.y + 1 do
-      val = 0
-      if x == 0 or x == board_size.x + 1 or y == board_size.y + 1 then
-        val = -1
-      end
-      board[x][y] = val
+      board[x][y] = -1  -- Fill with -1's at first.
+    end
+  end
+  for x = 1, board_size.x do
+    for y = 1, board_size.y do
+      board[x][y] = 0   -- Replace inside with 0's; border left as -1's.
     end
   end
 
@@ -261,7 +261,7 @@ local function draw_board()
     for y = 1, board_size.y + 1 do
       color = board[x][y]
       if color == 0 then color = colors.black end
-      draw_point(x, y, color)
+      draw_point(x, y, color)  -- This doesn't draw pieces when we're paused.
     end
   end
 
