@@ -15,7 +15,7 @@ local posix  = require 'posix'
 -- p[x][y] is either 0 or 1, indicating where the piece lives.
 -- The final form of the pieces array is set up by init_shapes.
 
-shapes = {
+local shapes = {
   { {0, 1, 0},
     {1, 1, 1}
   },
@@ -208,7 +208,7 @@ local function init_curses()
   stdscr:keypad()       -- Correctly catch arrow key presses.
 end
 
-function rotate_shape(s)
+local function rotate_shape(s)
   local new_shape = {}
   local y_end = #s[1] + 1  -- Chosen so that y_end - y is still in [1, y_max].
 
