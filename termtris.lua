@@ -13,9 +13,9 @@ local posix  = require 'posix'
 
 -- At runtime, pieces[shape_num][rot_num] is a 2D array p so that
 -- p[x][y] is either 0 or 1, indicating where the piece lives.
--- The final form of the pieces array is set up by init_pieces.
+-- The final form of the pieces array is set up by init_shapes.
 
-pieces = {
+shapes = {
   { {0, 1, 0},
     {1, 1, 1}
   },
@@ -56,11 +56,10 @@ local fall_interval = 0.7
 local last_fall_at  = nil  -- Timestamp of the last fall event.
 local stats = {level = 1, lines = 0, score = 0}
 
-local fall_piece      -- Which piece is falling.
-local fall_x, fall_y  -- Where the falling piece is.
-local fall_rot
-
-local next_piece
+-- We use the *shape* for an index into the shapes table; the
+-- term *piece* also includes a rotation number and x, y coords.
+local moving_piece = {}  -- Keys will be: shape, rot_num, x, y.
+local next_shape
 
 -- These are useful for calling set_color.
 local colors = { white = 1, blue = 2, cyan = 3, green = 4,
@@ -123,24 +122,24 @@ end
 
 -- This function iterates over all x, y coords of a piece
 -- anchored at the given px, py coordinates. Example use:
--- for x, y in piece_coords(1, 1, 3, 4) do draw_at(x, y) end
-local function piece_coords(pi, rot_num, px, py)
-  local p = pieces[pi][rot_num]
+-- for x, y in piece_coords(piece) do draw_at(x, y) end
+local function piece_coords(piece)
+  local s = shapes[piece.shape][piece.rot_num]
   local x, y = 0, 1
-  local x_end, y_end = #p + 1, #p[1] + 1
+  local x_end, y_end = #s + 1, #s[1] + 1
   return function ()
     repeat
       x = x + 1
       if x == x_end then x, y = 1, y + 1 end
-    until y == y_end or p[x][y] == 1
-    if y ~= y_end then return px + x, py + y end
+    until y == y_end or s[x][y] == 1
+    if y ~= y_end then return piece.x + x, piece.y + y end
   end
 end
 
-local function draw_point(x, y, c)
+local function draw_point(x, y, color)
   point_char = ' '
-  if c and c > 0 then set_color(c) end
-  if c and c == -1 then
+  if color and color > 0 then set_color(color) end
+  if color and color == -1 then
     set_color(text_color)
     if game_state == 'over' then set_color(end_color) end
     point_char = '|'
@@ -157,29 +156,32 @@ local function show_next_piece()
   stdscr:mvaddstr(2, screen_dims.x_labels, '----------')
   stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
 
-  for x, y in piece_coords(next_piece, 1, board_size.x + 5, 3) do
-    draw_point(x, y, next_piece)
+  local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
+  for x, y in piece_coords(piece) do
+    draw_point(x, y, next_shape)
   end
 end
 
 -- Returns true iff the move was valid.
-local function move_fall_piece_if_valid(new_x, new_y, new_rot)
-  for x, y in piece_coords(fall_piece, new_rot, new_x, new_y) do
+local function set_moving_piece_if_valid(piece)
+  -- Use values of moving_piece as defaults.
+  for k, v in pairs(moving_piece) do
+    if piece[k] == nil then piece[k] = moving_piece[k] end
+  end
+  for x, y in piece_coords(piece) do
     if board[x] and board[x][y] ~= 0 then return false end
   end
-  fall_x, fall_y, fall_rot = new_x, new_y, new_rot
+  moving_piece = piece
   return true
 end
 
-local function new_falling_piece()
-  fall_piece = next_piece
-  fall_x, fall_y = 4, 0
-  fall_rot = 1
-  if not move_fall_piece_if_valid(fall_x, fall_y, fall_rot) then
+local function new_moving_piece()
+  moving_piece = {shape = next_shape, rot_num = 1, x = 4, y = 0}
+  if not set_moving_piece_if_valid(moving_piece) then
     game_state = 'over'
     update_stats()
   end
-  next_piece = math.random(#pieces)
+  next_shape = math.random(#shapes)
 end
 
 local function update_screen_dims()
@@ -206,27 +208,26 @@ local function init_curses()
   stdscr:keypad()       -- Correctly catch arrow key presses.
 end
 
-function rotate_piece(p)
-  local new_piece = {}
-  local y_end = #p[1] + 1  -- Chosen so that y_end - y is still in [1, y_max].
+function rotate_shape(s)
+  local new_shape = {}
+  local y_end = #s[1] + 1  -- Chosen so that y_end - y is still in [1, y_max].
 
-  for y = 1, #p[1] do
-    new_piece[y] = {}
-    for x = 1, #p do
-      new_piece[y][x] = p[x][y_end - y]
+  for y = 1, #s[1] do
+    new_shape[y] = {}
+    for x = 1, #s do
+      new_shape[y][x] = s[x][y_end - y]
     end
   end
 
-  return new_piece
+  return new_shape
 end
 
-local function init_pieces()
-  for pi = 1, #pieces do
-    local p = pieces[pi]
-    pieces[pi] = {}
+local function init_shapes()
+  for s_index, s in ipairs(shapes) do
+    shapes[s_index] = {}
     for rot_num = 1, 4 do
-      p = rotate_piece(p)
-      pieces[pi][rot_num] = p
+      s = rotate_shape(s)
+      shapes[s_index][rot_num] = s
     end
   end
 end
@@ -236,7 +237,7 @@ local function init()
 
   last_fall_at = now()
 
-  init_pieces()
+  init_shapes()
   init_curses()
 
   -- The board includes boundaries.
@@ -251,8 +252,8 @@ local function init()
     end
   end
 
-  next_piece = math.random(#pieces)
-  new_falling_piece()
+  next_shape = math.random(#shapes)
+  new_moving_piece()
 end
 
 local function draw_board()
@@ -272,9 +273,9 @@ local function draw_board()
     return
   end
 
-  -- Draw the currently-falling piece.
-  for x, y in piece_coords(fall_piece, fall_rot, fall_x, fall_y) do
-    draw_point(x, y, fall_piece)
+  -- Draw the currently-moving piece.
+  for x, y in piece_coords(moving_piece) do
+    draw_point(x, y, moving_piece.shape)
   end
 end
 
@@ -301,20 +302,18 @@ end
 local function line_is_full(y)
   if y > board_size.y then return false end
   for x = 1, board_size.x do
-    if board[x][y] == 0 then
-      return false
-    end
+    if board[x][y] == 0 then return false end
   end
   return true
 end
 
--- This checks the 4 lines affected by the current fall piece,
--- which we expect to have just been added to the board.
+-- This checks the 4 lines affected by the current moving piece,
+-- which we expect to have just hit and been locked in at the bottom.
 local function check_for_full_lines()
   local num_removed = 0
-  for y = fall_y + 1, fall_y + 4 do
-    if line_is_full(y) then
-      remove_line(y)
+  for dy = 1, 4 do
+    if line_is_full(moving_piece.y + dy) then
+      remove_line  (moving_piece.y + dy)
       num_removed = num_removed + 1
     end
   end
@@ -322,12 +321,12 @@ local function check_for_full_lines()
   stats.score = stats.score + num_removed * num_removed
 end
 
-local function falling_piece_hit_bottom()
-  for x, y in piece_coords(fall_piece, fall_rot, fall_x, fall_y) do
-    board[x][y] = fall_piece  -- Lock the falling piece in place.
+local function moving_piece_hit_bottom()
+  for x, y in piece_coords(moving_piece) do
+    board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
   end
   check_for_full_lines()
-  new_falling_piece()
+  new_moving_piece()
 end
 
 local function handle_key(key)
@@ -345,17 +344,17 @@ local function handle_key(key)
   if game_state ~= 'playing' then return end
 
   if key == curses.KEY_LEFT then
-    move_fall_piece_if_valid(fall_x - 1, fall_y, fall_rot)
+    set_moving_piece_if_valid({x = moving_piece.x - 1})
   end
   if key == curses.KEY_RIGHT then
-    move_fall_piece_if_valid(fall_x + 1, fall_y, fall_rot)
+    set_moving_piece_if_valid({x = moving_piece.x + 1})
   end
   if key == curses.KEY_DOWN then
-    while move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) do end
-    falling_piece_hit_bottom()
+    while set_moving_piece_if_valid({y = moving_piece.y + 1}) do end
+    moving_piece_hit_bottom()
   end
   if key == curses.KEY_UP then
-    move_fall_piece_if_valid(fall_x, fall_y, (fall_rot % 4) + 1)
+    set_moving_piece_if_valid({rot_num = (moving_piece.rot_num % 4) + 1})
   end
 end
 
@@ -365,8 +364,8 @@ local function lower_piece_at_right_time()
 
   local timestamp = now()
   if (timestamp - last_fall_at) > fall_interval then
-    if not move_fall_piece_if_valid(fall_x, fall_y + 1, fall_rot) then
-      falling_piece_hit_bottom()
+    if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
+      moving_piece_hit_bottom()
     end
     last_fall_at = timestamp
   end
@@ -382,8 +381,8 @@ init()
 while true do
 
   -- Handle key presses.
-  local c = stdscr:getch()  -- Nonblocking.
-  if c then handle_key(c) end
+  local key = stdscr:getch()  -- Nonblocking.
+  if key then handle_key(key) end
 
   lower_piece_at_right_time()
 
