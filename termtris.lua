@@ -179,7 +179,6 @@ local function new_moving_piece()
   moving_piece = {shape = next_shape, rot_num = 1, x = 4, y = 0}
   if not set_moving_piece_if_valid(moving_piece) then
     game_state = 'over'
-    update_stats()
   end
   next_shape = math.random(#shapes)
 end
@@ -296,7 +295,6 @@ local function remove_line(remove_y)
     stats.level = stats.level + 1
     fall_interval = fall_interval * 0.8
   end
-  update_stats()
 end
 
 local function line_is_full(y)
