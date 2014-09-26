@@ -240,14 +240,14 @@ local function init()
   init_curses()
 
   -- Set the board; 0 for empty; -1 for border cells.
-  for x = 0, board_size.x + 1 do
-    for y = 1, board_size.y + 1 do
-      board[x][y] = -1  -- Fill with -1's at first.
-    end
-  end
-  for x = 1, board_size.x do
-    for y = 1, board_size.y do
-      board[x][y] = 0   -- Replace inside with 0's; border left as -1's.
+  local border = {x = board_size.x + 1, y = board_size.y + 1}
+  for x = 0, border.x do
+    board[x] = {}
+    for y = 1, border.y do
+      board[x][y] = 0
+      if x == 0 or x == border.x or y == border.y then
+        board[x][y] = -1  -- This is a border cell.
+      end
     end
   end
 
