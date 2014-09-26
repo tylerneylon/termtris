@@ -44,8 +44,7 @@ pieces = {
 
 local stdscr = nil
 
-local x_size = 11
-local y_size = 20
+local board_size = {x = 11, y = 20}
 
 -- board[x][y] = <piece index at (x, y)>; 0 = empty, -1 = border.
 local board = {}
@@ -71,7 +70,7 @@ local  end_color = 10
 
 local game_state = 'playing'
 
-local screen_coords = {}
+local screen_dims = {}
 
 ------------------------------------------------------------------
 -- Internal functions.
@@ -114,11 +113,11 @@ end
 -- Refresh the user-visible stats such as level and score.
 local function update_stats()
   set_color(text_color)
-  stdscr:mvaddstr( 9, screen_coords.x_labels, 'Level ' .. stats.level)
-  stdscr:mvaddstr(11, screen_coords.x_labels, 'Lines ' .. stats.lines)
-  stdscr:mvaddstr(13, screen_coords.x_labels, 'Score ' .. stats.score)
+  stdscr:mvaddstr( 9, screen_dims.x_labels, 'Level ' .. stats.level)
+  stdscr:mvaddstr(11, screen_dims.x_labels, 'Lines ' .. stats.lines)
+  stdscr:mvaddstr(13, screen_dims.x_labels, 'Score ' .. stats.score)
   if game_state == 'over' then
-    stdscr:mvaddstr(16, screen_coords.x_labels, 'Game Over')
+    stdscr:mvaddstr(16, screen_dims.x_labels, 'Game Over')
   end
 end
 
@@ -148,17 +147,17 @@ local function draw_point(x, y, c)
   elseif game_state == 'paused' then
     return  -- Only draw border pieces while paused.
   end
-  local x_offset = screen_coords.x_margin
+  local x_offset = screen_dims.x_margin
   stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
   stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
 end
 
 local function show_next_piece()
   set_color(text_color)
-  stdscr:mvaddstr(2, screen_coords.x_labels, '----------')
-  stdscr:mvaddstr(7, screen_coords.x_labels, '---Next---')
+  stdscr:mvaddstr(2, screen_dims.x_labels, '----------')
+  stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
 
-  for x, y in piece_coords(next_piece, 1, x_size + 5, 3) do
+  for x, y in piece_coords(next_piece, 1, board_size.x + 5, 3) do
     draw_point(x, y, next_piece)
   end
 end
@@ -183,13 +182,11 @@ local function new_falling_piece()
   next_piece = math.random(#pieces)
 end
 
-local function update_screen_coords()
-  screen_coords.x_size = curses.cols()
-  screen_coords.y_size = curses.lines()
-
-  local win_width = 2 * (x_size + 2) + 16
-  screen_coords.x_margin = math.floor((screen_coords.x_size - win_width) / 2)
-  screen_coords.x_labels = screen_coords.x_margin + win_width - 10
+local function update_screen_dims()
+  local scr_width = curses.cols()
+  local win_width = 2 * (board_size.x + 2) + 16
+  screen_dims.x_margin = math.floor((scr_width - win_width) / 2)
+  screen_dims.x_labels = screen_dims.x_margin + win_width - 10
 end
 
 local function init_curses()
@@ -243,11 +240,11 @@ local function init()
   init_curses()
 
   -- The board includes boundaries.
-  for x = 0, x_size + 1 do
+  for x = 0, board_size.x + 1 do
     board[x] = {}
-    for y = 1, y_size + 1 do
+    for y = 1, board_size.y + 1 do
       val = 0
-      if x == 0 or x == x_size + 1 or y == y_size + 1 then
+      if x == 0 or x == board_size.x + 1 or y == board_size.y + 1 then
         val = -1
       end
       board[x][y] = val
@@ -260,8 +257,8 @@ end
 
 local function draw_board()
   -- Draw the non-falling pieces.
-  for x = 0, x_size + 1 do
-    for y = 1, y_size + 1 do
+  for x = 0, board_size.x + 1 do
+    for y = 1, board_size.y + 1 do
       color = board[x][y]
       if color == 0 then color = colors.black end
       draw_point(x, y, color)
@@ -270,8 +267,8 @@ local function draw_board()
 
   if game_state == 'paused' then
     set_color(text_color)
-    local x = screen_coords.x_margin + x_size - 1
-    stdscr:mvaddstr(math.floor(y_size / 2), x, 'paused')
+    local x = screen_dims.x_margin + board_size.x - 1
+    stdscr:mvaddstr(math.floor(board_size.y / 2), x, 'paused')
     return
   end
 
@@ -289,7 +286,7 @@ end
 
 local function remove_line(remove_y)
   for y = remove_y, 2, -1 do
-    for x = 1, x_size do
+    for x = 1, board_size.x do
       board[x][y] = board[x][y - 1]
     end
   end
@@ -302,8 +299,8 @@ local function remove_line(remove_y)
 end
 
 local function line_is_full(y)
-  if y > y_size then return false end
-  for x = 1, x_size do
+  if y > board_size.y then return false end
+  for x = 1, board_size.x do
     if board[x][y] == 0 then
       return false
     end
@@ -392,7 +389,7 @@ while true do
 
   -- Drawing.
   stdscr:erase()
-  update_screen_coords()
+  update_screen_dims()
   draw_board()
   update_stats()
   show_next_piece()
