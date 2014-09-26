@@ -11,9 +11,9 @@ local posix  = require 'posix'
 -- Piece shapes.
 ------------------------------------------------------------------
 
--- At runtime, pieces[shape_num][rot_num] is a 2D array p so that
--- p[x][y] is either 0 or 1, indicating where the piece lives.
--- The final form of the pieces array is set up by init_shapes.
+-- At runtime, shapes[shape_num][rot_num] is a 2D array s so that
+-- s[x][y] is either 0 or 1, indicating where the shape lives.
+-- The final form of the shapes array is set up by init_shapes.
 
 local shapes = {
   { {0, 1, 0},
@@ -121,7 +121,7 @@ local function update_stats()
 end
 
 -- This function iterates over all x, y coords of a piece
--- anchored at the given px, py coordinates. Example use:
+-- anchored at the piece's x, y coordinates. Example use:
 -- for x, y in piece_coords(piece) do draw_at(x, y) end
 local function piece_coords(piece)
   local s = shapes[piece.shape][piece.rot_num]
