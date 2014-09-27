@@ -109,17 +109,6 @@ local function set_color(c)
   stdscr:attron(curses.color_pair(c))
 end
 
--- Refresh the user-visible stats such as level and score.
-local function update_stats()
-  set_color(text_color)
-  stdscr:mvaddstr( 9, screen_dims.x_labels, 'Level ' .. stats.level)
-  stdscr:mvaddstr(11, screen_dims.x_labels, 'Lines ' .. stats.lines)
-  stdscr:mvaddstr(13, screen_dims.x_labels, 'Score ' .. stats.score)
-  if game_state == 'over' then
-    stdscr:mvaddstr(16, screen_dims.x_labels, 'Game Over')
-  end
-end
-
 -- This function iterates over all x, y coords of a piece
 -- anchored at the piece's x, y coordinates. Example use:
 -- for x, y in piece_coords(piece) do draw_at(x, y) end
@@ -151,11 +140,21 @@ local function draw_point(x, y, color)
   stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
 end
 
-local function show_next_piece()
+-- Draw the level, lines, score, and next piece.
+local function draw_side_bar()
+  -- Draw the stats: level, lines, and score.
+  set_color(text_color)
+  stdscr:mvaddstr( 9, screen_dims.x_labels, 'Level ' .. stats.level)
+  stdscr:mvaddstr(11, screen_dims.x_labels, 'Lines ' .. stats.lines)
+  stdscr:mvaddstr(13, screen_dims.x_labels, 'Score ' .. stats.score)
+  if game_state == 'over' then
+    stdscr:mvaddstr(16, screen_dims.x_labels, 'Game Over')
+  end
+
+  -- Draw the next piece.
   set_color(text_color)
   stdscr:mvaddstr(2, screen_dims.x_labels, '----------')
   stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
-
   local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
   for x, y in piece_coords(piece) do
     draw_point(x, y, next_shape)
@@ -388,8 +387,7 @@ while true do
   stdscr:erase()
   update_screen_dims()
   draw_board()
-  update_stats()
-  show_next_piece()
+  draw_side_bar()
   stdscr:refresh()
 
   sleep(0.002)  -- Be responsive but avoid killing the cpu.
