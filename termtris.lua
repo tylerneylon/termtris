@@ -75,9 +75,8 @@ local screen_dims = {}
 -- Internal functions.
 ------------------------------------------------------------------
 
--- Accepts a one-byte string as input and returns
--- the numeric value of the byte.
--- This is similar to Python's ord function.
+-- Accepts a one-byte string as input and returns the numeric
+-- value of the byte. This is similar to Python's ord function.
 local function ord(c)
   return tostring(c):byte(1)
 end
@@ -174,7 +173,7 @@ local function set_moving_piece_if_valid(piece)
   return true
 end
 
-local function new_moving_piece()
+local function use_next_moving_piece()
   moving_piece = {shape = next_shape, rot_num = 1, x = 4, y = 0}
   if not set_moving_piece_if_valid(moving_piece) then
     game_state = 'over'
@@ -251,7 +250,7 @@ local function init()
   end
 
   next_shape = math.random(#shapes)
-  new_moving_piece()
+  use_next_moving_piece()
 end
 
 local function draw_board()
@@ -278,9 +277,8 @@ local function draw_board()
 end
 
 local function sleep(interval)
-  sec = math.floor(interval)
-  usec = math.floor((interval - sec) * 1e9)
-  posix.nanosleep(sec, usec)
+  sec, nsec = math.floor(interval), math.floor((interval % 1) * 1e9)
+  posix.nanosleep(sec, nsec)
 end
 
 local function remove_line(remove_y)
@@ -306,7 +304,7 @@ end
 
 -- This checks the 4 lines affected by the current moving piece,
 -- which we expect to have just hit and been locked in at the bottom.
-local function check_for_full_lines()
+local function handle_any_full_lines()
   local num_removed = 0
   for dy = 1, 4 do
     if line_is_full(moving_piece.y + dy) then
@@ -318,12 +316,12 @@ local function check_for_full_lines()
   stats.score = stats.score + num_removed * num_removed
 end
 
-local function moving_piece_hit_bottom()
+local function lock_and_update_moving_piece()
   for x, y in piece_coords(moving_piece) do
     board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
   end
-  check_for_full_lines()
-  new_moving_piece()
+  handle_any_full_lines()
+  use_next_moving_piece()
 end
 
 local function handle_key(key)
@@ -340,7 +338,7 @@ local function handle_key(key)
   if game_state ~= 'playing' then return end  -- Arrow keys only work if playing.
 
   -- Handle the left, right, or up arrows.
-  lcoal new_rot_num = (moving_piece.rot_num % 4) + 1  -- Map 1->2->3->4->1.
+  local new_rot_num = (moving_piece.rot_num % 4) + 1  -- Map 1->2->3->4->1.
   local moves = {[curses.KEY_LEFT]  = {x = moving_piece.x - 1},
                  [curses.KEY_RIGHT] = {x = moving_piece.x + 1},
                  [curses.KEY_UP]    = {rot_num = new_rot_num}}
@@ -349,7 +347,7 @@ local function handle_key(key)
   -- Handle the down arrow.
   if key == curses.KEY_DOWN then
     while set_moving_piece_if_valid({y = moving_piece.y + 1}) do end
-    moving_piece_hit_bottom()
+    lock_and_update_moving_piece()
   end
 end
 
@@ -360,7 +358,7 @@ local function lower_piece_at_right_time()
   local timestamp = now()
   if (timestamp - last_fall_at) > fall_interval then
     if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
-      moving_piece_hit_bottom()
+      lock_and_update_moving_piece()
     end
     last_fall_at = timestamp
   end
