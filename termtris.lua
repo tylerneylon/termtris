@@ -337,21 +337,19 @@ local function handle_key(key)
     if switch[game_state] then game_state = switch[game_state] end
   end
   
-  -- Don't respond to arrow keys if the game is over or paused.
-  if game_state ~= 'playing' then return end
+  if game_state ~= 'playing' then return end  -- Arrow keys only work if playing.
 
-  if key == curses.KEY_LEFT then
-    set_moving_piece_if_valid({x = moving_piece.x - 1})
-  end
-  if key == curses.KEY_RIGHT then
-    set_moving_piece_if_valid({x = moving_piece.x + 1})
-  end
+  -- Handle the left, right, or up arrows.
+  lcoal new_rot_num = (moving_piece.rot_num % 4) + 1  -- Map 1->2->3->4->1.
+  local moves = {[curses.KEY_LEFT]  = {x = moving_piece.x - 1},
+                 [curses.KEY_RIGHT] = {x = moving_piece.x + 1},
+                 [curses.KEY_UP]    = {rot_num = new_rot_num}}
+  if moves[key] then set_moving_piece_if_valid(moves[key]) end
+
+  -- Handle the down arrow.
   if key == curses.KEY_DOWN then
     while set_moving_piece_if_valid({y = moving_piece.y + 1}) do end
     moving_piece_hit_bottom()
-  end
-  if key == curses.KEY_UP then
-    set_moving_piece_if_valid({rot_num = (moving_piece.rot_num % 4) + 1})
   end
 end
 
