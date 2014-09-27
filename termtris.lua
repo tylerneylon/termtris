@@ -43,9 +43,15 @@ local shapes = {
 ------------------------------------------------------------------
 
 local stdscr = nil
+local screen_dims = {}
+
+-- These are useful for calling set_color.
+local colors = { white = 1, blue = 2, cyan = 3, green = 4,
+                 magenta = 5, red = 6, yellow = 7, black = 8 }
+local text_color = 9
+local  end_color = 10
 
 local board_size = {x = 11, y = 20}
-
 -- board[x][y] = <piece index at (x, y)>; 0 = empty, -1 = border.
 local board = {}
 
@@ -54,22 +60,16 @@ local board = {}
 -- to move the piece faster than this.
 local fall_interval = 0.7
 local last_fall_at  = nil  -- Timestamp of the last fall event.
+
 local stats = {level = 1, lines = 0, score = 0}
 
--- We use the *shape* for an index into the shapes table; the
+-- We'll write *shape* for an index into the shapes table; the
 -- term *piece* also includes a rotation number and x, y coords.
 local moving_piece = {}  -- Keys will be: shape, rot_num, x, y.
 local next_shape
 
--- These are useful for calling set_color.
-local colors = { white = 1, blue = 2, cyan = 3, green = 4,
-                 magenta = 5, red = 6, yellow = 7, black = 8 }
-local text_color = 9
-local  end_color = 10
-
 local game_state = 'playing'
 
-local screen_dims = {}
 
 ------------------------------------------------------------------
 -- Internal functions.
