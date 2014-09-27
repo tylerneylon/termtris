@@ -11,9 +11,9 @@ local posix  = require 'posix'
 -- Piece shapes.
 ------------------------------------------------------------------
 
--- At runtime, shapes[shape_num][rot_num] is a 2D array s so that
--- s[x][y] is either 0 or 1, indicating where the shape lives.
--- The final form of the shapes array is set up by init_shapes.
+-- The final form of the shapes array is set up by init_shapes so
+-- that at runtime, s = shapes[shape_num][rot_num] is a 2D array
+-- with s[x][y] = either 0 or 1, indicating the piece's shape.
 
 local shapes = {
   { {0, 1, 0},
