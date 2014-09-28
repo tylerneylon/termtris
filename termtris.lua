@@ -11,7 +11,7 @@ local posix  = require 'posix'
 -- Piece shapes.
 ------------------------------------------------------------------
 
--- The final form of the shapes array is set up by init_shapes so
+-- The final form of the shapes array is set up in init so
 -- that at runtime, s = shapes[shape_num][rot_num] is a 2D array
 -- with s[x][y] = either 0 or 1, indicating the piece's shape.
 
@@ -84,22 +84,6 @@ end
 local function now()
   timeval = posix.gettimeofday()
   return timeval.sec + timeval.usec * 1e-6
-end
-
-local function init_colors()
-  curses.start_color()
-  if not curses.has_colors() then
-    curses.endwin()
-    print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
-    os.exit(1)
-  end
-
-  for k, v in pairs(colors) do
-    curses_color = curses['COLOR_' .. k:upper()]
-    curses.init_pair(v, curses_color, curses_color)
-  end
-  curses.init_pair(text_color, curses.COLOR_WHITE, curses.COLOR_BLACK)
-  curses.init_pair( end_color, curses.COLOR_RED,   curses.COLOR_BLACK)
 end
 
 -- Accepts integer values corresponding to the 'colors' table
@@ -188,23 +172,6 @@ local function update_screen_dims()
   screen_dims.x_labels = screen_dims.x_margin + win_width - 10
 end
 
-local function init_curses()
-  -- Start up curses.
-  curses.initscr()
-  curses.cbreak()
-  curses.echo(false)  -- not noecho
-  curses.nl(false)    -- not nonl
-  local invisible = 0
-  curses.curs_set(invisible)  -- Hide the cursor.
-
-  init_colors()
-
-  -- Set up our standard screen.
-  stdscr = curses.stdscr()
-  stdscr:nodelay(true)  -- Make getch nonblocking.
-  stdscr:keypad()       -- Correctly catch arrow key presses.
-end
-
 local function rotate_shape(s)
   local new_shape = {}
   local y_end = #s[1] + 1  -- Chosen so that y_end - y is still in [1, y_max].
@@ -219,7 +186,12 @@ local function rotate_shape(s)
   return new_shape
 end
 
-local function init_shapes()
+local function init()
+  math.randomseed(now())
+
+  last_fall_at = now()
+
+  -- Set up the shapes table.
   for s_index, s in ipairs(shapes) do
     shapes[s_index] = {}
     for rot_num = 1, 4 do
@@ -227,15 +199,33 @@ local function init_shapes()
       shapes[s_index][rot_num] = s
     end
   end
-end
 
-local function init()
-  math.randomseed(now())
+  -- Start up curses.
+  curses.initscr()
+  curses.cbreak()
+  curses.echo(false)  -- not noecho
+  curses.nl(false)    -- not nonl
+  local invisible = 0
+  curses.curs_set(invisible)  -- Hide the cursor.
 
-  last_fall_at = now()
+  -- Set up colors.
+  curses.start_color()
+  if not curses.has_colors() then
+    curses.endwin()
+    print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
+    os.exit(1)
+  end
+  for k, v in pairs(colors) do
+    curses_color = curses['COLOR_' .. k:upper()]
+    curses.init_pair(v, curses_color, curses_color)
+  end
+  curses.init_pair(text_color, curses.COLOR_WHITE, curses.COLOR_BLACK)
+  curses.init_pair( end_color, curses.COLOR_RED,   curses.COLOR_BLACK)
 
-  init_shapes()
-  init_curses()
+  -- Set up our standard screen.
+  stdscr = curses.stdscr()
+  stdscr:nodelay(true)  -- Make getch nonblocking.
+  stdscr:keypad()       -- Correctly catch arrow key presses.
 
   -- Set the board; 0 for empty; -1 for border cells.
   local border = {x = board_size.x + 1, y = board_size.y + 1}
@@ -249,6 +239,7 @@ local function init()
     end
   end
 
+  -- Set up the next and currently moving piece.
   next_shape = math.random(#shapes)
   use_next_moving_piece()
 end
