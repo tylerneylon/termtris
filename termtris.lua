@@ -308,7 +308,7 @@ local function handle_any_full_lines()
   local num_removed = 0
   for dy = 1, 4 do
     if line_is_full(moving_piece.y + dy) then
-      remove_line  (moving_piece.y + dy)
+      remove_line(moving_piece.y + dy)
       num_removed = num_removed + 1
     end
   end
@@ -368,23 +368,26 @@ end
 -- Main.
 ------------------------------------------------------------------
 
-init()
+local function main()
+  init()
 
--- Main loop.
-while true do
+  while true do  -- Main loop.
 
-  -- Handle key presses.
-  local key = stdscr:getch()  -- Nonblocking.
-  if key then handle_key(key) end
+    -- Handle key presses.
+    local key = stdscr:getch()  -- Nonblocking.
+    if key then handle_key(key) end
 
-  lower_piece_at_right_time()
+    lower_piece_at_right_time()
 
-  -- Drawing.
-  stdscr:erase()
-  update_screen_dims()
-  draw_board()
-  draw_side_bar()
-  stdscr:refresh()
+    -- Drawing.
+    stdscr:erase()
+    update_screen_dims()
+    draw_board()
+    draw_side_bar()
+    stdscr:refresh()
 
-  sleep(0.002)  -- Be responsive but avoid killing the cpu.
+    sleep(0.002)  -- Be responsive but avoid killing the cpu.
+  end
 end
+
+main()
