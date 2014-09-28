@@ -75,12 +75,6 @@ local game_state = 'playing'
 -- Internal functions.
 ------------------------------------------------------------------
 
--- Accepts a one-byte string as input and returns the numeric
--- value of the byte. This is similar to Python's ord function.
-local function ord(c)
-  return tostring(c):byte(1)
-end
-
 local function now()
   timeval = posix.gettimeofday()
   return timeval.sec + timeval.usec * 1e-6
@@ -316,12 +310,12 @@ local function lock_and_update_moving_piece()
 end
 
 local function handle_key(key)
-  if key == ord('q') then
+  if key == tostring('q'):byte(1) then  -- The q key quits.
     curses.endwin()
     os.exit(0)
   end
 
-  if key == ord('p') then
+  if key == tostring('p'):byte(1) then  -- The p key pauses or unpauses.
     local switch = {playing = 'paused', paused = 'playing'}
     if switch[game_state] then game_state = switch[game_state] end
   end
