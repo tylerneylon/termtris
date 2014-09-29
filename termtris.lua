@@ -261,12 +261,13 @@ local function handle_any_full_lines()
       if board[x][line_y] == 0 then is_full_line = false end
     end
     if is_full_line then
-      -- Remove the line at moving_piece.y + dy.
+      -- Remove the line at line_y.
       for y = line_y, 2, -1 do
         for x = 1, board_size.x do
           board[x][y] = board[x][y - 1]
         end
       end
+      -- Record the line and level updates.
       stats.lines = stats.lines + 1
       if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
         stats.level = stats.level + 1
