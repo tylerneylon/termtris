@@ -88,8 +88,8 @@ end
 
 -- This function calls callback(x, y) for each x, y coord
 -- in the given piece. Example use using draw_point(x, y):
--- for_xy_in_piece(moving_piece, draw_point)
-local function for_xy_in_piece(piece, callback)
+-- call_fn_for_xy_in_piece(moving_piece, draw_point)
+local function call_fn_for_xy_in_piece(piece, callback)
   local s = shapes[piece.shape][piece.rot_num]
   for x, row in ipairs(s) do
     for y, val in ipairs(row) do
@@ -130,7 +130,7 @@ local function draw_side_bar()
   stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
   local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
   set_color(next_shape)
-  for_xy_in_piece(piece, draw_point)
+  call_fn_for_xy_in_piece(piece, draw_point)
 end
 
 -- Returns true iff the move was valid.
@@ -140,7 +140,7 @@ local function set_moving_piece_if_valid(piece)
     if piece[k] == nil then piece[k] = moving_piece[k] end
   end
   local is_valid = true
-  for_xy_in_piece(piece, function (x, y)
+  call_fn_for_xy_in_piece(piece, function (x, y)
     if board[x] and board[x][y] ~= 0 then is_valid = false end
   end)
   if is_valid then moving_piece = piece end
@@ -253,7 +253,7 @@ local function draw_board()
 
   -- Draw the currently-moving piece.
   set_color(moving_piece.shape)
-  for_xy_in_piece(moving_piece, draw_point)
+  call_fn_for_xy_in_piece(moving_piece, draw_point)
 end
 
 local function sleep(interval)
@@ -297,7 +297,7 @@ local function handle_any_full_lines()
 end
 
 local function lock_and_update_moving_piece()
-  for_xy_in_piece(moving_piece, function (x, y)
+  call_fn_for_xy_in_piece(moving_piece, function (x, y)
     board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
   end)
   handle_any_full_lines()
