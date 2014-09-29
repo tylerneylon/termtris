@@ -250,34 +250,28 @@ local function draw_board()
   call_fn_for_xy_in_piece(moving_piece, draw_point)
 end
 
-local function remove_line(remove_y)
-  for y = remove_y, 2, -1 do
-    for x = 1, board_size.x do
-      board[x][y] = board[x][y - 1]
-    end
-  end
-  stats.lines = stats.lines + 1
-  if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
-    stats.level = stats.level + 1
-    fall_interval = fall_interval * 0.8
-  end
-end
-
-local function line_is_full(y)
-  if y > board_size.y then return false end
-  for x = 1, board_size.x do
-    if board[x][y] == 0 then return false end
-  end
-  return true
-end
-
 -- This checks the 4 lines affected by the current moving piece,
 -- which we expect to have just hit and been locked in at the bottom.
 local function handle_any_full_lines()
   local num_removed = 0
-  for dy = 1, 4 do
-    if line_is_full(moving_piece.y + dy) then
-      remove_line(moving_piece.y + dy)
+  local max_line_y = math.min(moving_piece.y + 4, board_size.y)
+  for line_y = moving_piece.y + 1, max_line_y do
+    local is_full_line = true
+    for x = 1, board_size.x do
+      if board[x][line_y] == 0 then is_full_line = false end
+    end
+    if is_full_line then
+      -- Remove the line at moving_piece.y + dy.
+      for y = line_y, 2, -1 do
+        for x = 1, board_size.x do
+          board[x][y] = board[x][y - 1]
+        end
+      end
+      stats.lines = stats.lines + 1
+      if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
+        stats.level = stats.level + 1
+        fall_interval = fall_interval * 0.8
+      end
       num_removed = num_removed + 1
     end
   end
