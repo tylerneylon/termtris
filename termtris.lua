@@ -86,19 +86,15 @@ local function set_color(c)
   stdscr:attron(curses.color_pair(c))
 end
 
--- This function iterates over all x, y coords of a piece
--- anchored at the piece's x, y coordinates. Example use:
--- for x, y in piece_coords(piece) do draw_at(x, y) end
-local function piece_coords(piece)
+-- This function calls callback(x, y) for each x, y coord
+-- in the given piece. Example use using draw_point(x, y):
+-- for_xy_in_piece(moving_piece, draw_point)
+local function for_xy_in_piece(piece, callback)
   local s = shapes[piece.shape][piece.rot_num]
-  local x, y = 0, 1
-  local x_end, y_end = #s + 1, #s[1] + 1
-  return function ()
-    repeat
-      x = x + 1
-      if x == x_end then x, y = 1, y + 1 end
-    until y == y_end or s[x][y] == 1
-    if y ~= y_end then return piece.x + x, piece.y + y end
+  for x, row in ipairs(s) do
+    for y, val in ipairs(row) do
+      if val == 1 then callback(piece.x + x, piece.y + y) end
+    end
   end
 end
 
@@ -133,9 +129,8 @@ local function draw_side_bar()
   stdscr:mvaddstr(2, screen_dims.x_labels, '----------')
   stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
   local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
-  for x, y in piece_coords(piece) do
-    draw_point(x, y, next_shape)
-  end
+  set_color(next_shape)
+  for_xy_in_piece(piece, draw_point)
 end
 
 -- Returns true iff the move was valid.
@@ -144,11 +139,12 @@ local function set_moving_piece_if_valid(piece)
   for k, v in pairs(moving_piece) do
     if piece[k] == nil then piece[k] = moving_piece[k] end
   end
-  for x, y in piece_coords(piece) do
-    if board[x] and board[x][y] ~= 0 then return false end
-  end
-  moving_piece = piece
-  return true
+  local is_valid = true
+  for_xy_in_piece(piece, function (x, y)
+    if board[x] and board[x][y] ~= 0 then is_valid = false end
+  end)
+  if is_valid then moving_piece = piece end
+  return is_valid
 end
 
 local function use_next_moving_piece()
@@ -256,9 +252,8 @@ local function draw_board()
   end
 
   -- Draw the currently-moving piece.
-  for x, y in piece_coords(moving_piece) do
-    draw_point(x, y, moving_piece.shape)
-  end
+  set_color(moving_piece.shape)
+  for_xy_in_piece(moving_piece, draw_point)
 end
 
 local function sleep(interval)
@@ -302,9 +297,9 @@ local function handle_any_full_lines()
 end
 
 local function lock_and_update_moving_piece()
-  for x, y in piece_coords(moving_piece) do
+  for_xy_in_piece(moving_piece, function (x, y)
     board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
-  end
+  end)
   handle_any_full_lines()
   use_next_moving_piece()
 end
