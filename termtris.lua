@@ -75,11 +75,6 @@ local game_state = 'playing'
 -- Internal functions.
 ------------------------------------------------------------------
 
-local function now()
-  timeval = posix.gettimeofday()
-  return timeval.sec + timeval.usec * 1e-6
-end
-
 -- Accepts integer values corresponding to the 'colors' table
 -- created above. For example, call 'set_color(colors.black)'.
 local function set_color(c)
@@ -177,9 +172,8 @@ local function rotate_shape(s)
 end
 
 local function init()
-  math.randomseed(now())
-
-  last_fall_at = now()
+  -- Use the current time's microseconds as our random seed.
+  math.randomseed(posix.gettimeofday().usec)
 
   -- Set up the shapes table.
   for s_index, s in ipairs(shapes) do
@@ -330,13 +324,17 @@ local function lower_piece_at_right_time()
   -- This function does nothing if the game is paused or over.
   if game_state ~= 'playing' then return end
 
-  local timestamp = now()
-  if (timestamp - last_fall_at) > fall_interval then
-    if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
-      lock_and_update_moving_piece()
-    end
-    last_fall_at = timestamp
+  local timeval = posix.gettimeofday()
+  local timestamp = timeval.sec + timeval.usec * 1e-6
+  if last_fall_at == nil then last_fall_at = timestamp end
+
+  -- Do nothing until it's been fall_interval seconds since the last fall.
+  if timestamp - last_fall_at < fall_interval then return end
+ 
+  if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
+    lock_and_update_moving_piece()
   end
+  last_fall_at = timestamp
 end
 
 ------------------------------------------------------------------
