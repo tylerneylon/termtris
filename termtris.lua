@@ -256,11 +256,6 @@ local function draw_board()
   call_fn_for_xy_in_piece(moving_piece, draw_point)
 end
 
-local function sleep(interval)
-  sec, nsec = math.floor(interval), math.floor((interval % 1) * 1e9)
-  posix.nanosleep(sec, nsec)
-end
-
 local function remove_line(remove_y)
   for y = remove_y, 2, -1 do
     for x = 1, board_size.x do
@@ -366,7 +361,9 @@ local function main()
     draw_side_bar()
     stdscr:refresh()
 
-    sleep(0.002)  -- Be responsive but avoid killing the cpu.
+    -- Don't poll for input much faster than the display can change.
+    local sec, nsec = 0, 5e6  -- 0.005 seconds.
+    posix.nanosleep(sec, nsec)
   end
 end
 
