@@ -277,7 +277,10 @@ local function lock_and_update_moving_piece()
   use_next_moving_piece()
 end
 
-local function handle_key(key)
+local function handle_input()
+  local key = stdscr:getch()  -- Nonblocking.
+  if key == nil then return end
+
   if key == tostring('q'):byte(1) then  -- The q key quits.
     curses.endwin()
     os.exit(0)
@@ -330,12 +333,8 @@ local function main()
 
   while true do  -- Main loop.
 
-    -- Handle key presses.
-    local key = stdscr:getch()  -- Nonblocking.
-    if key then handle_key(key) end
-
+    handle_input()
     lower_piece_at_right_time()
-
     draw_screen()
 
     -- Don't poll for input much faster than the display can change.
