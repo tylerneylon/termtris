@@ -42,33 +42,17 @@ local shapes = {
 -- Declare internal globals.
 ------------------------------------------------------------------
 
-local stdscr = nil
-local screen_dims = {}
+local game_state = 'playing'
 
--- These are useful for calling set_color.
-local colors = { white = 1, blue = 2, cyan = 3, green = 4,
-                 magenta = 5, red = 6, yellow = 7, black = 8 }
-local text_color = 9
-local  end_color = 10
+local stdscr = nil
 
 local board_size = {x = 11, y = 20}
--- board[x][y] = <piece index at (x, y)>; 0 = empty, -1 = border.
-local board = {}
-
--- The fall_interval is the number of seconds between
--- quantum downward piece movements. The player is free
--- to move the piece faster than this.
-local fall_interval = 0.7
-local last_fall_at  = nil  -- Timestamp of the last fall event.
-
-local stats = {level = 1, lines = 0, score = 0}
+local board = {}  -- board[x][y] = <piece at (x, y)>; 0 = empty, -1 = border.
 
 -- We'll write *shape* for an index into the shapes table; the
 -- term *piece* also includes a rotation number and x, y coords.
 local moving_piece = {}  -- Keys will be: shape, rot_num, x, y.
 local next_shape
-
-local game_state = 'playing'
 
 
 ------------------------------------------------------------------
@@ -76,7 +60,7 @@ local game_state = 'playing'
 ------------------------------------------------------------------
 
 -- Accepts integer values corresponding to the 'colors' table
--- created above. For example, call 'set_color(colors.black)'.
+-- created by init. For example, call 'set_color(colors.black)'.
 local function set_color(c)
   stdscr:attron(curses.color_pair(c))
 end
@@ -84,21 +68,20 @@ end
 -- This function calls callback(x, y) for each x, y coord
 -- in the given piece. Example use using draw_point(x, y):
 -- call_fn_for_xy_in_piece(moving_piece, draw_point)
-local function call_fn_for_xy_in_piece(piece, callback)
+local function call_fn_for_xy_in_piece(piece, callback, param)
   local s = shapes[piece.shape][piece.rot_num]
   for x, row in ipairs(s) do
     for y, val in ipairs(row) do
-      if val == 1 then callback(piece.x + x, piece.y + y) end
+      if val == 1 then callback(piece.x + x, piece.y + y, param) end
     end
   end
 end
 
-local function draw_point(x, y, color, point_char)
+local function draw_point(x, y, x_offset, color, point_char)
   point_char = point_char or ' '
   if color then set_color(color) end
   -- Don't draw pieces when the game is paused.
   if point_char == ' ' and game_state == 'paused' then return end
-  local x_offset = screen_dims.x_margin
   stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
   stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
 end
@@ -153,12 +136,15 @@ local function init()
     print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
     os.exit(1)
   end
+  local colors = { white = 1, blue = 2, cyan = 3, green = 4,
+                   magenta = 5, red = 6, yellow = 7, black = 8 }
   for k, v in pairs(colors) do
     curses_color = curses['COLOR_' .. k:upper()]
     curses.init_pair(v, curses_color, curses_color)
   end
-  curses.init_pair(text_color, curses.COLOR_WHITE, curses.COLOR_BLACK)
-  curses.init_pair( end_color, curses.COLOR_RED,   curses.COLOR_BLACK)
+  colors.text, colors.over = 9, 10
+  curses.init_pair(colors.text, curses.COLOR_WHITE, curses.COLOR_BLACK)
+  curses.init_pair(colors.over, curses.COLOR_RED,   curses.COLOR_BLACK)
 
   -- Set up our standard screen.
   stdscr = curses.stdscr()
@@ -180,61 +166,68 @@ local function init()
   -- Set up the next and currently moving piece.
   moving_piece = {shape = math.random(#shapes), rot_num = 1, x = 4, y = 0}
   next_shape = math.random(#shapes)
+
+  local stats = {level = 1, lines = 0, score = 0}  -- Player stats.
+
+  -- fall.interval is the number of seconds between downward piece movements.
+  local fall = {interval = 0.7}  -- A 'last_at' time is added to this table later.
+
+  return stats, fall, colors
 end
 
-local function draw_screen()
+local function draw_screen(stats, colors)
   stdscr:erase()
 
   -- Update the screen dimensions.
   local scr_width = curses.cols()
   local win_width = 2 * (board_size.x + 2) + 16
-  screen_dims.x_margin = math.floor((scr_width - win_width) / 2)
-  screen_dims.x_labels = screen_dims.x_margin + win_width - 10
+  local x_margin = math.floor((scr_width - win_width) / 2)
+  local x_labels = x_margin + win_width - 10
 
   -- Draw the board's border and non-falling pieces if we're not paused.
-  local color_of_val = {[-1] = text_color, [0] = colors.black}
+  local color_of_val = {[-1] = colors.text, [0] = colors.black}
   local char_of_val = {[-1] = '|'}  -- This is the border character.
-  if game_state == 'over' then color_of_val[-1] = end_color end
+  if game_state == 'over' then color_of_val[-1] = colors.over end
   for x = 0, board_size.x + 1 do
     for y = 1, board_size.y + 1 do
       local board_val = board[x][y]
       -- Draw ' ' for shape & empty points; '|' for border points.
       local pt_char = char_of_val[board_val] or ' '
-      draw_point(x, y, color_of_val[board_val] or board_val, pt_char)
+      draw_point(x, y, x_margin, color_of_val[board_val] or board_val, pt_char)
     end
   end
 
   -- Write 'paused' if the we're paused; draw the moving piece otherwise.
   if game_state == 'paused' then
-    set_color(text_color)
-    local x = screen_dims.x_margin + board_size.x - 1
+    set_color(colors.text)
+    local x = x_margin + board_size.x - 1
     stdscr:mvaddstr(math.floor(board_size.y / 2), x, 'paused')
   else
     set_color(moving_piece.shape)
-    call_fn_for_xy_in_piece(moving_piece, draw_point)
+    call_fn_for_xy_in_piece(moving_piece, draw_point, x_margin)
   end
 
   -- Draw the stats: level, lines, and score.
-  set_color(text_color)
-  stdscr:mvaddstr( 9, screen_dims.x_labels, 'Level ' .. stats.level)
-  stdscr:mvaddstr(11, screen_dims.x_labels, 'Lines ' .. stats.lines)
-  stdscr:mvaddstr(13, screen_dims.x_labels, 'Score ' .. stats.score)
+  set_color(colors.text)
+  stdscr:mvaddstr( 9, x_labels, 'Level ' .. stats.level)
+  stdscr:mvaddstr(11, x_labels, 'Lines ' .. stats.lines)
+  stdscr:mvaddstr(13, x_labels, 'Score ' .. stats.score)
   if game_state == 'over' then
-    stdscr:mvaddstr(16, screen_dims.x_labels, 'Game Over')
+    stdscr:mvaddstr(16, x_labels, 'Game Over')
   end
 
   -- Draw the next piece.
-  set_color(text_color)
-  stdscr:mvaddstr(2, screen_dims.x_labels, '----------')
-  stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
+  set_color(colors.text)
+  stdscr:mvaddstr(2, x_labels, '----------')
+  stdscr:mvaddstr(7, x_labels, '---Next---')
   local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
   set_color(next_shape)
-  call_fn_for_xy_in_piece(piece, draw_point)
+  call_fn_for_xy_in_piece(piece, draw_point, x_margin)
 
   stdscr:refresh()
 end
 
-local function lock_and_update_moving_piece()
+local function lock_and_update_moving_piece(stats, fall)
   call_fn_for_xy_in_piece(moving_piece, function (x, y)
     board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
   end)
@@ -258,7 +251,7 @@ local function lock_and_update_moving_piece()
       stats.lines = stats.lines + 1
       if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
         stats.level = stats.level + 1
-        fall_interval = fall_interval * 0.8
+        fall.interval = fall.interval * 0.8
       end
       num_removed = num_removed + 1
     end
@@ -274,8 +267,8 @@ local function lock_and_update_moving_piece()
   next_shape = math.random(#shapes)
 end
 
-local function handle_input()
-  local key = stdscr:getch()  -- Nonblocking.
+local function handle_input(stats, fall)
+  local key = stdscr:getch()  -- Nonblocking; returns nil if no key was pressed.
   if key == nil then return end
 
   if key == tostring('q'):byte(1) then  -- The q key quits.
@@ -300,25 +293,25 @@ local function handle_input()
   -- Handle the down arrow.
   if key == curses.KEY_DOWN then
     while set_moving_piece_if_valid({y = moving_piece.y + 1}) do end
-    lock_and_update_moving_piece()
+    lock_and_update_moving_piece(stats, fall)
   end
 end
 
-local function lower_piece_at_right_time()
+local function lower_piece_at_right_time(stats, fall)
   -- This function does nothing if the game is paused or over.
   if game_state ~= 'playing' then return end
 
   local timeval = posix.gettimeofday()
   local timestamp = timeval.sec + timeval.usec * 1e-6
-  if last_fall_at == nil then last_fall_at = timestamp end
+  if fall.last_at == nil then fall.last_at = timestamp end
 
-  -- Do nothing until it's been fall_interval seconds since the last fall.
-  if timestamp - last_fall_at < fall_interval then return end
+  -- Do nothing until it's been fall.interval seconds since the last fall.
+  if timestamp - fall.last_at < fall.interval then return end
  
   if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
-    lock_and_update_moving_piece()
+    lock_and_update_moving_piece(stats, fall)
   end
-  last_fall_at = timestamp
+  fall.last_at = timestamp
 end
 
 ------------------------------------------------------------------
@@ -326,13 +319,13 @@ end
 ------------------------------------------------------------------
 
 local function main()
-  init()
+  local stats, fall, colors = init()
 
   while true do  -- Main loop.
 
-    handle_input()
-    lower_piece_at_right_time()
-    draw_screen()
+    handle_input(stats, fall)
+    lower_piece_at_right_time(stats, fall)
+    draw_screen(stats, colors)
 
     -- Don't poll for input much faster than the display can change.
     local sec, nsec = 0, 5e6  -- 0.005 seconds.
