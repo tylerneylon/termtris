@@ -44,10 +44,11 @@ local shapes = {
 
 local game_state = 'playing'  -- Could also be 'paused' or 'over'.
 
-local stdscr = nil
+local stdscr = nil  -- This will be the standard screen from the curses library.
 
 local board_size = {x = 11, y = 20}
 local board = {}  -- board[x][y] = <piece at (x, y)>; 0 = empty, -1 = border.
+local val = {border = -1, empty = 0}  -- Shorthand to avoid magic numbers.
 
 -- We'll write *shape* for an index into the shapes table; the
 -- term *piece* also includes a rotation number and x, y coords.
@@ -150,14 +151,14 @@ local function init()
   stdscr:nodelay(true)  -- Make getch nonblocking.
   stdscr:keypad()       -- Correctly catch arrow key presses.
 
-  -- Set the board; 0 for empty; -1 for border cells.
+  -- Set up the board.
   local border = {x = board_size.x + 1, y = board_size.y + 1}
   for x = 0, border.x do
     board[x] = {}
     for y = 1, border.y do
-      board[x][y] = 0
+      board[x][y] = val.empty
       if x == 0 or x == border.x or y == border.y then
-        board[x][y] = -1  -- This is a border cell.
+        board[x][y] = val.border  -- This is a border cell.
       end
     end
   end
@@ -185,9 +186,9 @@ local function draw_screen(stats, colors, next_piece)
   local x_labels = x_margin + win_width - 10
 
   -- Draw the board's border and non-falling pieces if we're not paused.
-  local color_of_val = {[-1] = colors.text, [0] = colors.black}
-  local char_of_val = {[-1] = '|'}  -- This is the border character.
-  if game_state == 'over' then color_of_val[-1] = colors.over end
+  local color_of_val = {[val.border] = colors.text, [val.empty] = colors.black}
+  local char_of_val = {[val.border] = '|'}  -- This is the border character.
+  if game_state == 'over' then color_of_val[val.border] = colors.over end
   for x = 0, board_size.x + 1 do
     for y = 1, board_size.y + 1 do
       local board_val = board[x][y]
