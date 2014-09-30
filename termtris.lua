@@ -117,14 +117,6 @@ local function set_moving_piece_if_valid(piece)
   return is_valid
 end
 
-local function use_next_moving_piece()
-  moving_piece = {shape = next_shape, rot_num = 1, x = 4, y = 0}
-  if not set_moving_piece_if_valid(moving_piece) then
-    game_state = 'over'
-  end
-  next_shape = math.random(#shapes)
-end
-
 local function init()
   -- Use the current time's microseconds as our random seed.
   math.randomseed(posix.gettimeofday().usec)
@@ -186,8 +178,8 @@ local function init()
   end
 
   -- Set up the next and currently moving piece.
+  moving_piece = {shape = math.random(#shapes), rot_num = 1, x = 4, y = 0}
   next_shape = math.random(#shapes)
-  use_next_moving_piece()
 end
 
 local function draw_screen()
@@ -274,7 +266,12 @@ local function lock_and_update_moving_piece()
   if num_removed > 0 then curses.flash() end
   stats.score = stats.score + num_removed * num_removed
 
-  use_next_moving_piece()
+  -- Bring in the waiting next piece and set up a new next piece.
+  moving_piece = {shape = next_shape, rot_num = 1, x = 4, y = 0}
+  if not set_moving_piece_if_valid(moving_piece) then
+    game_state = 'over'
+  end
+  next_shape = math.random(#shapes)
 end
 
 local function handle_input()
