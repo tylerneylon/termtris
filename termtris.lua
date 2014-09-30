@@ -180,12 +180,11 @@ local function init()
   end
 
   -- Start up curses.
-  curses.initscr()
-  curses.cbreak()
-  curses.echo(false)  -- not noecho
-  curses.nl(false)    -- not nonl
-  local invisible = 0
-  curses.curs_set(invisible)  -- Hide the cursor.
+  curses.initscr()    -- Initialize the curses library and the terminal screen.
+  curses.cbreak()     -- Turn off input line buffering.
+  curses.echo(false)  -- Don't print out characters as the user types them.
+  curses.nl(false)    -- Turn off special-case return/newline handling.
+  curses.curs_set(0)  -- Hide the cursor.
 
   -- Set up colors.
   curses.start_color()
