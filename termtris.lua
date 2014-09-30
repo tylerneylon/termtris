@@ -1,5 +1,4 @@
--- <!-- (These two lines markdown-quietly begin a Lua comment.)
---[[ -->
+--[[
 
 # termtris: A ten-function tetris-like game
 
@@ -61,14 +60,12 @@ functions, including higher-resolution timestamps.
 
 Here are our module imports:
 
-<!-- (The next line markdown-quietly ends a Lua comment.) -->
 <!--]]-->
 
     local curses = require 'curses'
     local posix  = require 'posix'
 
--- <!--
---[[ -->
+--[[
 
 ### Main
 
