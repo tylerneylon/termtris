@@ -103,26 +103,6 @@ local function draw_point(x, y, color, point_char)
   stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
 end
 
--- Draw the level, lines, score, and next piece.
-local function draw_side_bar()
-  -- Draw the stats: level, lines, and score.
-  set_color(text_color)
-  stdscr:mvaddstr( 9, screen_dims.x_labels, 'Level ' .. stats.level)
-  stdscr:mvaddstr(11, screen_dims.x_labels, 'Lines ' .. stats.lines)
-  stdscr:mvaddstr(13, screen_dims.x_labels, 'Score ' .. stats.score)
-  if game_state == 'over' then
-    stdscr:mvaddstr(16, screen_dims.x_labels, 'Game Over')
-  end
-
-  -- Draw the next piece.
-  set_color(text_color)
-  stdscr:mvaddstr(2, screen_dims.x_labels, '----------')
-  stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
-  local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
-  set_color(next_shape)
-  call_fn_for_xy_in_piece(piece, draw_point)
-end
-
 -- Returns true iff the move was valid.
 local function set_moving_piece_if_valid(piece)
   -- Use values of moving_piece as defaults.
@@ -143,13 +123,6 @@ local function use_next_moving_piece()
     game_state = 'over'
   end
   next_shape = math.random(#shapes)
-end
-
-local function update_screen_dims()
-  local scr_width = curses.cols()
-  local win_width = 2 * (board_size.x + 2) + 16
-  screen_dims.x_margin = math.floor((scr_width - win_width) / 2)
-  screen_dims.x_labels = screen_dims.x_margin + win_width - 10
 end
 
 local function init()
@@ -217,8 +190,16 @@ local function init()
   use_next_moving_piece()
 end
 
-local function draw_board()
-  -- Draw the non-falling pieces.
+local function draw_screen()
+  stdscr:erase()
+
+  -- Update the screen dimensions.
+  local scr_width = curses.cols()
+  local win_width = 2 * (board_size.x + 2) + 16
+  screen_dims.x_margin = math.floor((scr_width - win_width) / 2)
+  screen_dims.x_labels = screen_dims.x_margin + win_width - 10
+
+  -- Draw the board's border and non-falling pieces if we're not paused.
   local color_of_val = {[-1] = text_color, [0] = colors.black}
   local char_of_val = {[-1] = '|'}  -- This is the border character.
   if game_state == 'over' then color_of_val[-1] = end_color end
@@ -231,16 +212,34 @@ local function draw_board()
     end
   end
 
+  -- Write 'paused' if the we're paused; draw the moving piece otherwise.
   if game_state == 'paused' then
     set_color(text_color)
     local x = screen_dims.x_margin + board_size.x - 1
     stdscr:mvaddstr(math.floor(board_size.y / 2), x, 'paused')
-    return
+  else
+    set_color(moving_piece.shape)
+    call_fn_for_xy_in_piece(moving_piece, draw_point)
   end
 
-  -- Draw the currently-moving piece.
-  set_color(moving_piece.shape)
-  call_fn_for_xy_in_piece(moving_piece, draw_point)
+  -- Draw the stats: level, lines, and score.
+  set_color(text_color)
+  stdscr:mvaddstr( 9, screen_dims.x_labels, 'Level ' .. stats.level)
+  stdscr:mvaddstr(11, screen_dims.x_labels, 'Lines ' .. stats.lines)
+  stdscr:mvaddstr(13, screen_dims.x_labels, 'Score ' .. stats.score)
+  if game_state == 'over' then
+    stdscr:mvaddstr(16, screen_dims.x_labels, 'Game Over')
+  end
+
+  -- Draw the next piece.
+  set_color(text_color)
+  stdscr:mvaddstr(2, screen_dims.x_labels, '----------')
+  stdscr:mvaddstr(7, screen_dims.x_labels, '---Next---')
+  local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
+  set_color(next_shape)
+  call_fn_for_xy_in_piece(piece, draw_point)
+
+  stdscr:refresh()
 end
 
 local function lock_and_update_moving_piece()
@@ -337,12 +336,7 @@ local function main()
 
     lower_piece_at_right_time()
 
-    -- Drawing.
-    stdscr:erase()
-    update_screen_dims()
-    draw_board()
-    draw_side_bar()
-    stdscr:refresh()
+    draw_screen()
 
     -- Don't poll for input much faster than the display can change.
     local sec, nsec = 0, 5e6  -- 0.005 seconds.
