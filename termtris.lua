@@ -42,7 +42,7 @@ local shapes = {
 -- Declare internal globals.
 ------------------------------------------------------------------
 
-local game_state = 'playing'
+local game_state = 'playing'  -- Could also be 'paused' or 'over'.
 
 local stdscr = nil
 
