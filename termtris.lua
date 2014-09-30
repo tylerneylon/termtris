@@ -52,7 +52,6 @@ local board = {}  -- board[x][y] = <piece at (x, y)>; 0 = empty, -1 = border.
 -- We'll write *shape* for an index into the shapes table; the
 -- term *piece* also includes a rotation number and x, y coords.
 local moving_piece = {}  -- Keys will be: shape, rot_num, x, y.
-local next_shape
 
 
 ------------------------------------------------------------------
@@ -165,17 +164,18 @@ local function init()
 
   -- Set up the next and currently moving piece.
   moving_piece = {shape = math.random(#shapes), rot_num = 1, x = 4, y = 0}
-  next_shape = math.random(#shapes)
+  -- Use a table so functions can edit its value without having to return it.
+  next_piece = {shape = math.random(#shapes)}
 
   local stats = {level = 1, lines = 0, score = 0}  -- Player stats.
 
   -- fall.interval is the number of seconds between downward piece movements.
   local fall = {interval = 0.7}  -- A 'last_at' time is added to this table later.
 
-  return stats, fall, colors
+  return stats, fall, colors, next_piece
 end
 
-local function draw_screen(stats, colors)
+local function draw_screen(stats, colors, next_piece)
   stdscr:erase()
 
   -- Update the screen dimensions.
@@ -220,14 +220,14 @@ local function draw_screen(stats, colors)
   set_color(colors.text)
   stdscr:mvaddstr(2, x_labels, '----------')
   stdscr:mvaddstr(7, x_labels, '---Next---')
-  local piece = {shape = next_shape, rot_num = 1, x = board_size.x + 5, y = 3}
-  set_color(next_shape)
+  local piece = {shape = next_piece.shape, rot_num = 1, x = board_size.x + 5, y = 3}
+  set_color(piece.shape)
   call_fn_for_xy_in_piece(piece, draw_point, x_margin)
 
   stdscr:refresh()
 end
 
-local function lock_and_update_moving_piece(stats, fall)
+local function lock_and_update_moving_piece(stats, fall, next_piece)
   call_fn_for_xy_in_piece(moving_piece, function (x, y)
     board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
   end)
@@ -260,14 +260,14 @@ local function lock_and_update_moving_piece(stats, fall)
   stats.score = stats.score + num_removed * num_removed
 
   -- Bring in the waiting next piece and set up a new next piece.
-  moving_piece = {shape = next_shape, rot_num = 1, x = 4, y = 0}
+  moving_piece = {shape = next_piece.shape, rot_num = 1, x = 4, y = 0}
   if not set_moving_piece_if_valid(moving_piece) then
     game_state = 'over'
   end
-  next_shape = math.random(#shapes)
+  next_piece.shape = math.random(#shapes)
 end
 
-local function handle_input(stats, fall)
+local function handle_input(stats, fall, next_piece)
   local key = stdscr:getch()  -- Nonblocking; returns nil if no key was pressed.
   if key == nil then return end
 
@@ -293,11 +293,11 @@ local function handle_input(stats, fall)
   -- Handle the down arrow.
   if key == curses.KEY_DOWN then
     while set_moving_piece_if_valid({y = moving_piece.y + 1}) do end
-    lock_and_update_moving_piece(stats, fall)
+    lock_and_update_moving_piece(stats, fall, next_piece)
   end
 end
 
-local function lower_piece_at_right_time(stats, fall)
+local function lower_piece_at_right_time(stats, fall, next_piece)
   -- This function does nothing if the game is paused or over.
   if game_state ~= 'playing' then return end
 
@@ -309,7 +309,7 @@ local function lower_piece_at_right_time(stats, fall)
   if timestamp - fall.last_at < fall.interval then return end
  
   if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
-    lock_and_update_moving_piece(stats, fall)
+    lock_and_update_moving_piece(stats, fall, next_piece)
   end
   fall.last_at = timestamp
 end
@@ -319,13 +319,13 @@ end
 ------------------------------------------------------------------
 
 local function main()
-  local stats, fall, colors = init()
+  local stats, fall, colors, next_piece = init()
 
   while true do  -- Main loop.
 
-    handle_input(stats, fall)
-    lower_piece_at_right_time(stats, fall)
-    draw_screen(stats, colors)
+    handle_input(stats, fall, next_piece)
+    lower_piece_at_right_time(stats, fall, next_piece)
+    draw_screen(stats, colors, next_piece)
 
     -- Don't poll for input much faster than the display can change.
     local sec, nsec = 0, 5e6  -- 0.005 seconds.
