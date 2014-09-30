@@ -243,9 +243,12 @@ local function draw_board()
   call_fn_for_xy_in_piece(moving_piece, draw_point)
 end
 
--- This checks the 4 lines affected by the current moving piece,
--- which we expect to have just hit and been locked in at the bottom.
-local function handle_any_full_lines()
+local function lock_and_update_moving_piece()
+  call_fn_for_xy_in_piece(moving_piece, function (x, y)
+    board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
+  end)
+
+  -- Clear any lines possibly filled up by the just-placed piece.
   local num_removed = 0
   local max_line_y = math.min(moving_piece.y + 4, board_size.y)
   for line_y = moving_piece.y + 1, max_line_y do
@@ -271,13 +274,7 @@ local function handle_any_full_lines()
   end
   if num_removed > 0 then curses.flash() end
   stats.score = stats.score + num_removed * num_removed
-end
 
-local function lock_and_update_moving_piece()
-  call_fn_for_xy_in_piece(moving_piece, function (x, y)
-    board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
-  end)
-  handle_any_full_lines()
   use_next_moving_piece()
 end
 
