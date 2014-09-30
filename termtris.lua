@@ -93,16 +93,11 @@ local function call_fn_for_xy_in_piece(piece, callback)
   end
 end
 
-local function draw_point(x, y, color)
-  point_char = ' '
-  if color and color > 0 then set_color(color) end
-  if color and color == -1 then
-    set_color(text_color)
-    if game_state == 'over' then set_color(end_color) end
-    point_char = '|'
-  elseif game_state == 'paused' then
-    return  -- Only draw border pieces while paused.
-  end
+local function draw_point(x, y, color, point_char)
+  point_char = point_char or ' '
+  if color then set_color(color) end
+  -- Don't draw pieces when the game is paused.
+  if point_char == ' ' and game_state == 'paused' then return end
   local x_offset = screen_dims.x_margin
   stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
   stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
@@ -230,11 +225,15 @@ end
 
 local function draw_board()
   -- Draw the non-falling pieces.
+  local color_of_val = {[-1] = text_color, [0] = colors.black}
+  local char_of_val = {[-1] = '|'}  -- This is the border character.
+  if game_state == 'over' then color_of_val[-1] = end_color end
   for x = 0, board_size.x + 1 do
     for y = 1, board_size.y + 1 do
-      color = board[x][y]
-      if color == 0 then color = colors.black end
-      draw_point(x, y, color)  -- This doesn't draw pieces when we're paused.
+      local board_val = board[x][y]
+      -- Draw ' ' for shape & empty points; '|' for border points.
+      local pt_char = char_of_val[board_val] or ' '
+      draw_point(x, y, color_of_val[board_val] or board_val, pt_char)
     end
   end
 
