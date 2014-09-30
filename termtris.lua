@@ -152,20 +152,6 @@ local function update_screen_dims()
   screen_dims.x_labels = screen_dims.x_margin + win_width - 10
 end
 
-local function rotate_shape(s)
-  local new_shape = {}
-  local y_end = #s[1] + 1  -- Chosen so that y_end - y is still in [1, y_max].
-
-  for y = 1, #s[1] do
-    new_shape[y] = {}
-    for x = 1, #s do
-      new_shape[y][x] = s[x][y_end - y]
-    end
-  end
-
-  return new_shape
-end
-
 local function init()
   -- Use the current time's microseconds as our random seed.
   math.randomseed(posix.gettimeofday().usec)
@@ -174,7 +160,16 @@ local function init()
   for s_index, s in ipairs(shapes) do
     shapes[s_index] = {}
     for rot_num = 1, 4 do
-      s = rotate_shape(s)
+      -- Rotate shape s by 90 degrees.
+      local new_shape = {}
+      local x_end = #s[1] + 1  -- Chosen so that x_end - x is in [1, x_max].
+      for x = 1, #s[1] do      -- Coords x & y are indexes for the new shape.
+        new_shape[x] = {}
+        for y = 1, #s do
+          new_shape[x][y] = s[y][x_end - x]
+        end
+      end
+      s = new_shape
       shapes[s_index][rot_num] = s
     end
   end
