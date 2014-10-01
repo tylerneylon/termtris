@@ -77,7 +77,9 @@ Here are our module imports:
 
 --[[
 
-### Function 1: main
+---
+
+### Function 1: The Main Loop
 
 Let's take a look at our game loop, which lives in a function called `main`.
 
@@ -249,7 +251,9 @@ tracking the currently moving piece.
 
 --[[
 
-### Function 2: init
+---
+
+### Function 2: Initialization
 
 A number of things must happen before the player can start playing.
 The `init` function takes care of all of these:
@@ -291,6 +295,7 @@ captured in the line `new_shape[x][y] = s[y][x_end - x]` in the loop below.
 
 <!--]]-->
 
+      -- Set up the shapes table.
       for s_index, s in ipairs(shapes) do
         shapes[s_index] = {}
         for rot_num = 1, 4 do
@@ -375,6 +380,9 @@ we use to make character input non-blocking, and to accept arrow keys.
 
 #### Set up the board.
 
+As mentioned above, the board is mostly 0's with a U-shaped
+border of -1 values along the left, right, and bottom edges.
+
 <!--]]-->
 
       -- Set up the board.
@@ -393,10 +401,16 @@ we use to make character input non-blocking, and to accept arrow keys.
 
 #### Set up player stats and the next and falling pieces.
 
+We track the position, orientation, and shape number of the currently
+moving piece in the `moving_piece` table. The `next_piece` table needs only
+track the shape of the next piece. The `stats` table tracks lines, level, and
+score; the `fall` table tracks when and how quickly the moving piece falls.
+
 <!--]]-->
 
       -- Set up the next and currently moving piece.
       moving_piece = {shape = math.random(#shapes), rot_num = 1, x = 4, y = 0}
+
       -- Use a table so functions can edit its value without having to return it.
       next_piece = {shape = math.random(#shapes)}
 
@@ -407,7 +421,7 @@ we use to make character input non-blocking, and to accept arrow keys.
 
 --[[
 
-#### Return local values.
+#### End of `init`: return local values.
 
 <!--]]-->
 
@@ -416,18 +430,94 @@ we use to make character input non-blocking, and to accept arrow keys.
 
 --[[
 
-### Accepting input.
+---
+
+### Function 3: Handling Input
+
+Our main game loop is set up so that the `handle_input` function gets called at most once every
+0.005 seconds - that is, up to 200 times each second. Most of the time, the player
+will not have pressed a key between since the last time we called `handle_input`, in which
+case our `stdscr:getch` call returns `nil`, and we can return immediately.
+
+Otherwise, we want to listen for and respond to the arrow keys and the `p` or `q` keys.
+The `getch` function returns an integer key code which is a standard ascii value for conventional
+keys, and a value like `curses.KEY_LEFT` for the arrow keys.
+
+First is the code to collect the `key` value and handle quitting or pausing/unpausing.
 
 <!--]]-->
 
-    ------------------------------------------------------------------
-    -- Internal functions.
-    ------------------------------------------------------------------
+    function handle_input(stats, fall, next_piece)
+      local key = stdscr:getch()  -- Nonblocking; returns nil if no key was pressed.
+      if key == nil then return end
 
-    -- Accepts integer values corresponding to the 'colors' table
-    -- created by init. For example, call 'set_color(colors.black)'.
-    function set_color(c)
-      stdscr:attron(curses.color_pair(c))
+      if key == tostring('q'):byte(1) then  -- The q key quits.
+        curses.endwin()
+        os.exit(0)
+      end
+
+      if key == tostring('p'):byte(1) then  -- The p key pauses or unpauses.
+        local switch = {playing = 'paused', paused = 'playing'}
+        if switch[game_state] then game_state = switch[game_state] end
+      end
+
+
+--[[
+
+Next we handle the arrow keys.
+
+We stop looking at the input in case the game is paused or over.
+
+After that, we can handle left, right, or up arrow keys with a simple incremental-change
+table sent in to the `set_moving_piece_if_valid` function. This function will only perform
+valid moves, and leaves the piece alone if the suggested move was invalid.
+
+The down arrow action is less obvious, as we want to move the piece down as far as we can
+until it hits something. We use a simple loop to achieve this, this time using the return
+value from `set_moving_piece_if_valid` to know when the piece has hit the bottom, at which
+point it's locked in palce.
+
+<!--]]-->
+
+      if game_state ~= 'playing' then return end  -- Arrow keys only work if playing.
+
+      -- Handle the left, right, or up arrows.
+      local new_rot_num = (moving_piece.rot_num % 4) + 1  -- Map 1->2->3->4->1.
+      local moves = {[curses.KEY_LEFT]  = {x = moving_piece.x - 1},
+                     [curses.KEY_RIGHT] = {x = moving_piece.x + 1},
+                     [curses.KEY_UP]    = {rot_num = new_rot_num}}
+      if moves[key] then set_moving_piece_if_valid(moves[key]) end
+
+      -- Handle the down arrow.
+      if key == curses.KEY_DOWN then
+        while set_moving_piece_if_valid({y = moving_piece.y + 1}) do end
+        lock_and_update_moving_piece(stats, fall, next_piece)
+      end
+    end
+
+--[[
+
+---
+
+### Functions 4 and 5: Working with Pieces
+
+*TODO add notes here*
+
+<!--]]-->
+
+
+    -- Returns true iff the move was valid.
+    function set_moving_piece_if_valid(piece)
+      -- Use values of moving_piece as defaults.
+      for k, v in pairs(moving_piece) do
+        if piece[k] == nil then piece[k] = moving_piece[k] end
+      end
+      local is_valid = true
+      call_fn_for_xy_in_piece(piece, function (x, y)
+        if board[x] and board[x][y] ~= 0 then is_valid = false end
+      end)
+      if is_valid then moving_piece = piece end
+      return is_valid
     end
 
     -- This function calls callback(x, y) for each x, y coord
@@ -442,6 +532,21 @@ we use to make character input non-blocking, and to accept arrow keys.
       end
     end
 
+
+--[[
+
+---
+
+### Functions 6 etc (TODO)
+
+<!--]]-->
+
+    -- Accepts integer values corresponding to the 'colors' table
+    -- created by init. For example, call 'set_color(colors.black)'.
+    function set_color(c)
+      stdscr:attron(curses.color_pair(c))
+    end
+
     function draw_point(x, y, x_offset, color, point_char)
       point_char = point_char or ' '
       if color then set_color(color) end
@@ -449,20 +554,6 @@ we use to make character input non-blocking, and to accept arrow keys.
       if point_char == ' ' and game_state == 'paused' then return end
       stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
       stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
-    end
-
-    -- Returns true iff the move was valid.
-    function set_moving_piece_if_valid(piece)
-      -- Use values of moving_piece as defaults.
-      for k, v in pairs(moving_piece) do
-        if piece[k] == nil then piece[k] = moving_piece[k] end
-      end
-      local is_valid = true
-      call_fn_for_xy_in_piece(piece, function (x, y)
-        if board[x] and board[x][y] ~= 0 then is_valid = false end
-      end)
-      if is_valid then moving_piece = piece end
-      return is_valid
     end
 
     function draw_screen(stats, colors, next_piece)
@@ -555,36 +646,6 @@ we use to make character input non-blocking, and to accept arrow keys.
         game_state = 'over'
       end
       next_piece.shape = math.random(#shapes)
-    end
-
-    function handle_input(stats, fall, next_piece)
-      local key = stdscr:getch()  -- Nonblocking; returns nil if no key was pressed.
-      if key == nil then return end
-
-      if key == tostring('q'):byte(1) then  -- The q key quits.
-        curses.endwin()
-        os.exit(0)
-      end
-
-      if key == tostring('p'):byte(1) then  -- The p key pauses or unpauses.
-        local switch = {playing = 'paused', paused = 'playing'}
-        if switch[game_state] then game_state = switch[game_state] end
-      end
-
-      if game_state ~= 'playing' then return end  -- Arrow keys only work if playing.
-
-      -- Handle the left, right, or up arrows.
-      local new_rot_num = (moving_piece.rot_num % 4) + 1  -- Map 1->2->3->4->1.
-      local moves = {[curses.KEY_LEFT]  = {x = moving_piece.x - 1},
-                     [curses.KEY_RIGHT] = {x = moving_piece.x + 1},
-                     [curses.KEY_UP]    = {rot_num = new_rot_num}}
-      if moves[key] then set_moving_piece_if_valid(moves[key]) end
-
-      -- Handle the down arrow.
-      if key == curses.KEY_DOWN then
-        while set_moving_piece_if_valid({y = moving_piece.y + 1}) do end
-        lock_and_update_moving_piece(stats, fall, next_piece)
-      end
     end
 
     function lower_piece_at_right_time(stats, fall, next_piece)
