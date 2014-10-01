@@ -4,8 +4,8 @@
 
 This is a file. It is a Lua file, and it is a markdown file.
 
-It is a file that teaches you how to make tetris, and it is
-a working source file that lets you play tetris.
+It is a file that teaches you how to make a tetris-like game, and it is
+a working source file that lets you play the game.
 
 ![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/sample.gif)
 
@@ -23,6 +23,16 @@ From there:
 * `sudo luarocks install luaposix lcurses`
 * `git clone https://github.com/tylerneylon/termtris.git`
 * `lua termtris/termtris.lua`
+
+Here are the game controls:
+
+| key                | action                           |
+|--------------------|----------------------------------|
+| left, right arrows | move the piece left or right     |
+| up arrow           | rotate the piece                 |
+| down arrow         | drop and lock the piece in place |
+| `p`                | pause or unpause                 |
+| `q`                | quit                             |
 
 ## Making a tetris-like game
 
@@ -67,7 +77,7 @@ Here are our module imports:
 
 --[[
 
-### Function 1: Main
+### Function 1: main
 
 Let's take a look at our game loop, which lives in a function called `main`.
 
@@ -129,18 +139,22 @@ There are seven possible shapes:
 
 ![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/the_seven_shapes.png)
 
+We'll set up the `shapes` table to be indexed first by shape number (1-7), and
+then by a rotation number (1-4). So `s = shapes[5][1]` represents shape number 5 in its
+first rotation orientation. This variable `s` represents the shape so that `s[x][y]` is
+either 0 or 1; it's value is 1 if the shape exists in the given `(x, y)` cell.
+
+There are 7 shapes and 4 rotated orientations, given 28 possible shape grids. Instead of
+initializing all of them by hand, we'll set up one rotation of each, and include some
+code in `init` that expands the `shapes` variable to include all 28 possibilities.
+
+Even though the `shape` variable - and others defined below - are global to this file, we declare
+them with the `local` keyword so that any other Lua code importing this file won't have
+these variables in scope. In a sense, they become 'locally global.'
 
 <!--]]-->
 
-
-
-    ------------------------------------------------------------------
-    -- Piece shapes.
-    ------------------------------------------------------------------
-
-    -- The final form of the shapes array is set up in init so
-    -- that at runtime, s = shapes[shape_num][rot_num] is a 2D array
-    -- with s[x][y] = either 0 or 1, indicating the piece's shape.
+    -- Set up one orientation of each shape.
 
     local shapes = {
       { {0, 1, 0},
@@ -165,22 +179,246 @@ There are seven possible shapes:
       }
     }
 
-    ------------------------------------------------------------------
-    -- Declare internal globals.
-    ------------------------------------------------------------------
+--[[
+
+### Global game state
+
+We'll use globals to conceptually track the following items:
+
+| global var          | description                                                                     |
+|---------------------|---------------------------------------------------------------------------------|
+| `game_state`        | Whether the game is playing, paused, or over.                                   |
+| `board`             | Where pieces have already been placed on the game board.                        |
+| `board_size`, `val` | Effectively, board-related constants to reduce magic numbers in the code.       |
+| `stdscr`            | A `curses`-library window object for drawing to the screen.                     |
+| `moving_piece`      | Which piece is currently falling: it has keys `shape`, `rot_num`, `x`, and `y`. |
+
+#### Game state
+
+We'll use strings values to track if the game is playing, paused, or over. This would be a good
+place to use an enum, but Lua doesn't have an enum equivalent.
+
+<!--]]-->
 
     local game_state = 'playing'  -- Could also be 'paused' or 'over'.
 
-    local stdscr = nil  -- This will be the standard screen from the curses library.
+--[[
+
+#### What's on the board
+
+We'll use an 11x20 board size. Traditional tetris games are usually 10x20, but I'm purposefully
+putting in some small differences in hopes of not getting sued.
+
+The game area where pieces may live is represented by values in `board[x][y]` where
+1 ≤ x ≤ board_size.x and 1 ≤ y ≤ board_size.y. The `board` variable also includes a U-shaped
+border with `board[x][y] == -1` where any of the following are true:
+* x = 0,
+* x = `board_size.x` + 1, or
+* y = `board_size.y` + 1.
+
+When a shape is locked in place - that is, after it's done falling - we update the affected
+cells in `board` by setting them to the shape number. This works since our shape numbers
+are all > 0, so that 0 itself can represent empty cells.
+
+It's very handy to keep the border of -1 values in the `board` itself since it simplifies
+testing to see if a potential piece placement might go off the edge of the playing area.
+
+We actually start with an empty `board` table that is filled in by the `init` function below.
+
+The `val` variable exists so we can write code like `board[x][y] == val.border` instead
+of the more cryptic `board[x][y] == -1`; and similarly for `val.empty` instead of 0.
+
+<!--]]-->
+
+
 
     local board_size = {x = 11, y = 20}
-    local board = {}  -- board[x][y] = <piece at (x, y)>; 0 = empty, -1 = border.
+    local board = {}                      -- board[x][y] = <piece at x, y>; 0 = empty, -1 = border.
     local val = {border = -1, empty = 0}  -- Shorthand to avoid magic numbers.
 
-    -- We'll write *shape* for an index into the shapes table; the
-    -- term *piece* also includes a rotation number and x, y coords.
+
+--[[
+
+Next are the remaining globals for the `curses` library's standard screen object and
+tracking the currently moving piece.
+
+<!--]]-->
+
+    local stdscr = nil  -- This will be the standard screen from the curses library.
     local moving_piece = {}  -- Keys will be: shape, rot_num, x, y.
 
+--[[
+
+### Function 2: init
+
+A number of things must happen before the player can start playing.
+The `init` function takes care of all of these:
+
+* Seed the random number generator.
+* Expand the `shapes` table to include all shape rotations.
+* Initialize the `curses` library to draw with colored text.
+* Set up the `board` variable.
+* Set up the player stats and the next and currently-moving piece.
+
+Let's see how each of these happen.
+
+#### Seed the random number generator
+
+This is important since otherwise the player will see the same piece sequence every game.
+
+<!--]]-->
+
+    function init()
+      -- Use the current time's microseconds as our random seed.
+      math.randomseed(posix.gettimeofday().usec)
+
+--[[
+
+#### Set up the shapes table.
+
+Before this code, `shapes[shape_index][rot_num]` exists only when
+`rot_num == 1`. So we have to take `shapes[shape_index][1]` and rotate it
+into `shapes[shape_index][i]` for `i` = 2, 3, 4.
+
+A simple way to perform a 90 degree rotation is to find the value for rotated grid point
+`(x, y)` at old grid point `(y, -x)`. In our case, negative or zero `x` values don't make
+sense - we want the minimum coordinate to be 1. So instead of looking at `(y, -x)`, we'll
+look at `(y, max_x + 1 - x)`. Mathematically, this is like a rotation around `(0, 0)`
+followed by a translation to get us back into positive `(x, y)` space.
+
+This rotation method is
+captured in the line `new_shape[x][y] = s[y][x_end - x]` in the loop below.
+
+<!--]]-->
+
+      for s_index, s in ipairs(shapes) do
+        shapes[s_index] = {}
+        for rot_num = 1, 4 do
+          -- Rotate shape s by 90 degrees.
+          local new_shape = {}
+          local x_end = #s[1] + 1  -- Chosen so that x_end - x is in [1, x_max].
+          for x = 1, #s[1] do      -- Coords x & y are indexes for the new shape.
+            new_shape[x] = {}
+            for y = 1, #s do
+              new_shape[x][y] = s[y][x_end - x]
+            end
+          end
+          s = new_shape
+          shapes[s_index][rot_num] = s
+        end
+      end
+
+--[[
+
+#### Start curses.
+
+The curses library requires initialization by calling its `initscr` function,
+and by setting a number of options appropriate for a terminal-based game.
+The individual comments in the code describe what each function achieves.
+
+<!--]]-->
+
+      -- Start up curses.
+      curses.initscr()    -- Initialize the curses library and the terminal screen.
+      curses.cbreak()     -- Turn off input line buffering.
+      curses.echo(false)  -- Don't print out characters as the user types them.
+      curses.nl(false)    -- Turn off special-case return/newline handling.
+      curses.curs_set(0)  -- Hide the cursor.
+
+--[[
+
+#### Set up colors.
+
+Each piece in `termtris` has its own color. The `curses` library requires registering
+an integer for each foreground/background color pair that we want to use. This is
+done by calling `curses.init_pair(<my_color_index>, <color1>, <color2>)`; the input
+colors are based on constants such as `curses.COLOR_RED`.
+
+For clearer code, we'll use a table called `colors`. Later we'll define a `set_color`
+function so that we can simply call `set_color(colors.red)` in order to print red
+characters to the screen.
+
+<!--]]-->
+
+      -- Set up colors.
+      curses.start_color()
+      if not curses.has_colors() then
+        curses.endwin()
+        print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
+        os.exit(1)
+      end
+      local colors = { white = 1, blue = 2, cyan = 3, green = 4,
+                       magenta = 5, red = 6, yellow = 7, black = 8 }
+      for k, v in pairs(colors) do
+        curses_color = curses['COLOR_' .. k:upper()]
+        curses.init_pair(v, curses_color, curses_color)
+      end
+      colors.text, colors.over = 9, 10
+      curses.init_pair(colors.text, curses.COLOR_WHITE, curses.COLOR_BLACK)
+      curses.init_pair(colors.over, curses.COLOR_RED,   curses.COLOR_BLACK)
+
+--[[
+
+#### Set up the standard screen object.
+
+All of our character drawing happens through this object. It is also the object
+we use to make character input non-blocking, and to accept arrow keys.
+
+<!--]]-->
+
+      -- Set up our standard screen.
+      stdscr = curses.stdscr()
+      stdscr:nodelay(true)  -- Make getch nonblocking.
+      stdscr:keypad()       -- Correctly catch arrow key presses.
+
+--[[
+
+#### Set up the board.
+
+<!--]]-->
+
+      -- Set up the board.
+      local border = {x = board_size.x + 1, y = board_size.y + 1}
+      for x = 0, border.x do
+        board[x] = {}
+        for y = 1, border.y do
+          board[x][y] = val.empty
+          if x == 0 or x == border.x or y == border.y then
+            board[x][y] = val.border  -- This is a border cell.
+          end
+        end
+      end
+
+--[[
+
+#### Set up player stats and the next and falling pieces.
+
+<!--]]-->
+
+      -- Set up the next and currently moving piece.
+      moving_piece = {shape = math.random(#shapes), rot_num = 1, x = 4, y = 0}
+      -- Use a table so functions can edit its value without having to return it.
+      next_piece = {shape = math.random(#shapes)}
+
+      local stats = {level = 1, lines = 0, score = 0}  -- Player stats.
+
+      -- fall.interval is the number of seconds between downward piece movements.
+      local fall = {interval = 0.7}  -- A 'last_at' time is added to this table later.
+
+--[[
+
+#### Return local values.
+
+<!--]]-->
+
+      return stats, fall, colors, next_piece
+    end
+
+--[[
+
+### Accepting input.
+
+<!--]]-->
 
     ------------------------------------------------------------------
     -- Internal functions.
@@ -225,82 +463,6 @@ There are seven possible shapes:
       end)
       if is_valid then moving_piece = piece end
       return is_valid
-    end
-
-    function init()
-      -- Use the current time's microseconds as our random seed.
-      math.randomseed(posix.gettimeofday().usec)
-
-      -- Set up the shapes table.
-      for s_index, s in ipairs(shapes) do
-        shapes[s_index] = {}
-        for rot_num = 1, 4 do
-          -- Rotate shape s by 90 degrees.
-          local new_shape = {}
-          local x_end = #s[1] + 1  -- Chosen so that x_end - x is in [1, x_max].
-          for x = 1, #s[1] do      -- Coords x & y are indexes for the new shape.
-            new_shape[x] = {}
-            for y = 1, #s do
-              new_shape[x][y] = s[y][x_end - x]
-            end
-          end
-          s = new_shape
-          shapes[s_index][rot_num] = s
-        end
-      end
-
-      -- Start up curses.
-      curses.initscr()    -- Initialize the curses library and the terminal screen.
-      curses.cbreak()     -- Turn off input line buffering.
-      curses.echo(false)  -- Don't print out characters as the user types them.
-      curses.nl(false)    -- Turn off special-case return/newline handling.
-      curses.curs_set(0)  -- Hide the cursor.
-
-      -- Set up colors.
-      curses.start_color()
-      if not curses.has_colors() then
-        curses.endwin()
-        print('Bummer! Looks like your terminal doesn\'t support colors :\'(')
-        os.exit(1)
-      end
-      local colors = { white = 1, blue = 2, cyan = 3, green = 4,
-                       magenta = 5, red = 6, yellow = 7, black = 8 }
-      for k, v in pairs(colors) do
-        curses_color = curses['COLOR_' .. k:upper()]
-        curses.init_pair(v, curses_color, curses_color)
-      end
-      colors.text, colors.over = 9, 10
-      curses.init_pair(colors.text, curses.COLOR_WHITE, curses.COLOR_BLACK)
-      curses.init_pair(colors.over, curses.COLOR_RED,   curses.COLOR_BLACK)
-
-      -- Set up our standard screen.
-      stdscr = curses.stdscr()
-      stdscr:nodelay(true)  -- Make getch nonblocking.
-      stdscr:keypad()       -- Correctly catch arrow key presses.
-
-      -- Set up the board.
-      local border = {x = board_size.x + 1, y = board_size.y + 1}
-      for x = 0, border.x do
-        board[x] = {}
-        for y = 1, border.y do
-          board[x][y] = val.empty
-          if x == 0 or x == border.x or y == border.y then
-            board[x][y] = val.border  -- This is a border cell.
-          end
-        end
-      end
-
-      -- Set up the next and currently moving piece.
-      moving_piece = {shape = math.random(#shapes), rot_num = 1, x = 4, y = 0}
-      -- Use a table so functions can edit its value without having to return it.
-      next_piece = {shape = math.random(#shapes)}
-
-      local stats = {level = 1, lines = 0, score = 0}  -- Player stats.
-
-      -- fall.interval is the number of seconds between downward piece movements.
-      local fall = {interval = 0.7}  -- A 'last_at' time is added to this table later.
-
-      return stats, fall, colors, next_piece
     end
 
     function draw_screen(stats, colors, next_piece)
