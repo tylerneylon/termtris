@@ -67,10 +67,14 @@ Here are our module imports:
 
 --[[
 
-### Main
+### Function 1: Main
 
-Let's take a look at our main game loop.
-We'll delegate initialization work to an `init` function.
+Let's take a look at our game loop, which lives in a function called `main`.
+
+This function will initialize the game state by calling `init`, then enter
+a seemingly-infinite `while true` loop that executes the game.
+The loop isn't really infinte because we can call `os.exit` when the player
+presses `q` to quit.
 
 A few local variables are going to be used:
 
@@ -88,7 +92,7 @@ are used as both input and output, it simplifies the code nicely.
 
 We'll also use a small number of globals. It's considered good practice
 to minimize global variable use. The global variables in this file either
-act as constants or are used so widely that making the dependencies explicit
+act as constants or are used so widely that passing them to many functions
 felt messier to me than leaving them as globals.
 
 Our main game loop takes three actions: check for any input, lower the
@@ -113,6 +117,21 @@ functions as we define them.
         posix.nanosleep(sec, nsec)
       end
     end
+
+--[[
+
+### Shape data
+
+Next let's set up all the possible shapes the player might see.
+We'll do this by setting up a single global table called `shapes`.
+
+There are seven possible shapes:
+
+![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/the_seven_shapes.png)
+
+
+<!--]]-->
+
 
 
     ------------------------------------------------------------------
