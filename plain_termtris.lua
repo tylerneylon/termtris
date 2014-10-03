@@ -21,7 +21,7 @@ local shapes = {
   },
   { {0, 1, 1},
     {1, 1, 0}
-  }, 
+  },
   { {1, 1, 0},
     {0, 1, 1}
   },
@@ -94,7 +94,7 @@ local function set_moving_piece_if_valid(piece)
   end
   local is_valid = true
   call_fn_for_xy_in_piece(piece, function (x, y)
-    if board[x] and board[x][y] ~= 0 then is_valid = false end
+    if board[x] and board[x][y] ~= val.empty then is_valid = false end
   end)
   if is_valid then moving_piece = piece end
   return is_valid
@@ -281,7 +281,7 @@ local function handle_input(stats, fall, next_piece)
     local switch = {playing = 'paused', paused = 'playing'}
     if switch[game_state] then game_state = switch[game_state] end
   end
-  
+
   if game_state ~= 'playing' then return end  -- Arrow keys only work if playing.
 
   -- Handle the left, right, or up arrows.
@@ -308,7 +308,7 @@ local function lower_piece_at_right_time(stats, fall, next_piece)
 
   -- Do nothing until it's been fall.interval seconds since the last fall.
   if timestamp - fall.last_at < fall.interval then return end
- 
+
   if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
     lock_and_update_moving_piece(stats, fall, next_piece)
   end

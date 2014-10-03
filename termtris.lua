@@ -501,7 +501,22 @@ point it's locked in palce.
 
 ### Functions 4 and 5: Working with Pieces
 
-*TODO add notes here*
+The `set_moving_piece_if_valid` function accepts a table
+that suggests new values for the `moving_piece`.
+If those new values are valid, `moving_piece` is updated
+and the function returns `true`; otherwise it returns false.
+
+This function is used for all piece movements: left, right,
+rotation, dropping, and even when getting a new piece after
+the previous piece has hit the bottom.
+
+Because the board's border is included in the `board` variable,
+the only check we have to make is that `board[x][y] == val.empty`
+for every cell occupied by the new piece values.
+
+We'll rely on a function called `call_fn_for_xy_in_piece` that
+helpfully iterates over all `(x, y)` offset values occupied by
+a given piece. We'll describe this utility function next.
 
 --]]
 
@@ -514,11 +529,26 @@ point it's locked in palce.
       end
       local is_valid = true
       call_fn_for_xy_in_piece(piece, function (x, y)
-        if board[x] and board[x][y] ~= 0 then is_valid = false end
+        if board[x] and board[x][y] ~= val.empty then is_valid = false end
       end)
       if is_valid then moving_piece = piece end
       return is_valid
     end
+
+--[[
+
+The function `call_fn_for_xy_in_piece` accepts a callback function, and calls
+that callback once for each `(x, y)` position in the given piece. This makes it
+easy to draw the piece or check if it's in a valid location.
+
+There are other ways this could have been implemented. We could have instead named this
+function `piece_coords` and defined it as a Lua *iterator*. In that case,
+we could have used the syntax `for x, y in piece_coords(piece) <loop body>`.
+I made the subjective decision to use a callback since I would like non-Lua-experts
+to find the code readable, and I consider Lua's iterator system to be less readable
+to Lua newbies.
+
+--]]
 
     -- This function calls callback(x, y) for each x, y coord
     -- in the given piece. Example use using draw_point(x, y):
