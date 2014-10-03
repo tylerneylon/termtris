@@ -567,7 +567,93 @@ to Lua newbies.
 
 ---
 
-### Functions 6 etc (TODO)
+### Function 6: When a piece hits the bottom
+
+The next function handles everything that needs to happen when a piece hits
+bottom. Once we define this function, we'll have completed all the code
+that might be called - directly or indirectly - from `handle_input`.
+
+There are three things that happen when a piece hits the bottom:
+
+1. The moving piece becomes part of the board.
+2. Any full lines are removed and scored, possibly moving us to a new level.
+3. The next piece begins falling from the top of the playing area.
+
+The code to make the moving piece part of the board is simple:
+
+--]]
+
+
+    function lock_and_update_moving_piece(stats, fall, next_piece)
+      call_fn_for_xy_in_piece(moving_piece, function (x, y)
+        board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
+      end)
+
+--[[
+
+Next we look for affected rows of `board` which have no empty cells;
+we call these "full lines." Each one is cleared, dropping anything above
+it downward by iterating over the line `board[x][y] = board[x][y - 1]`.
+
+We finish by incrementing the line count, the level if appropriate,
+and the score.
+
+--]]
+
+      -- Clear any lines possibly filled up by the just-placed piece.
+      local num_removed = 0
+      local max_line_y = math.min(moving_piece.y + 4, board_size.y)
+      for line_y = moving_piece.y + 1, max_line_y do
+        local is_full_line = true
+        for x = 1, board_size.x do
+          if board[x][line_y] == val.empty then is_full_line = false end
+        end
+        if is_full_line then
+          -- Remove the line at line_y.
+          for y = line_y, 2, -1 do
+            for x = 1, board_size.x do
+              board[x][y] = board[x][y - 1]
+            end
+          end
+          -- Record the line and level updates.
+          stats.lines = stats.lines + 1
+          if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
+            stats.level = stats.level + 1
+            fall.interval = fall.interval * 0.8
+          end
+          num_removed = num_removed + 1
+        end
+      end
+      if num_removed > 0 then curses.flash() end
+      stats.score = stats.score + num_removed * num_removed
+
+--[[
+
+Finally, `next_piece` begins to fall, and a new `next_piece` value is set up.
+
+Even though `board[x][y]` is only valid for y ≥ 1, we want to set up new
+pieces with `y=0`
+because `call_fn_for_xy_in_piece`
+uses the expression `piece.y + y` to determine a piece's `y` values, and
+the `y` in that expression ranges from 1 up to the height of the piece.
+In other words, `moving_piece.{x,y}` is the coordinate of the cell just
+to the upper-left of where the moving piece will be rendered.
+
+--]]
+
+      -- Bring in the waiting next piece and set up a new next piece.
+      moving_piece = {shape = next_piece.shape, rot_num = 1, x = 4, y = 0}
+      if not set_moving_piece_if_valid(moving_piece) then
+        game_state = 'over'
+      end
+      next_piece.shape = math.random(#shapes)
+    end
+
+--[[
+
+---
+
+### Functions 7 etc (TODO)
 
 --]]
 
@@ -636,46 +722,6 @@ to Lua newbies.
       call_fn_for_xy_in_piece(piece, draw_point, x_margin)
 
       stdscr:refresh()
-    end
-
-    function lock_and_update_moving_piece(stats, fall, next_piece)
-      call_fn_for_xy_in_piece(moving_piece, function (x, y)
-        board[x][y] = moving_piece.shape  -- Lock the moving piece in place.
-      end)
-
-      -- Clear any lines possibly filled up by the just-placed piece.
-      local num_removed = 0
-      local max_line_y = math.min(moving_piece.y + 4, board_size.y)
-      for line_y = moving_piece.y + 1, max_line_y do
-        local is_full_line = true
-        for x = 1, board_size.x do
-          if board[x][line_y] == 0 then is_full_line = false end
-        end
-        if is_full_line then
-          -- Remove the line at line_y.
-          for y = line_y, 2, -1 do
-            for x = 1, board_size.x do
-              board[x][y] = board[x][y - 1]
-            end
-          end
-          -- Record the line and level updates.
-          stats.lines = stats.lines + 1
-          if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
-            stats.level = stats.level + 1
-            fall.interval = fall.interval * 0.8
-          end
-          num_removed = num_removed + 1
-        end
-      end
-      if num_removed > 0 then curses.flash() end
-      stats.score = stats.score + num_removed * num_removed
-
-      -- Bring in the waiting next piece and set up a new next piece.
-      moving_piece = {shape = next_piece.shape, rot_num = 1, x = 4, y = 0}
-      if not set_moving_piece_if_valid(moving_piece) then
-        game_state = 'over'
-      end
-      next_piece.shape = math.random(#shapes)
     end
 
     function lower_piece_at_right_time(stats, fall, next_piece)

@@ -239,7 +239,7 @@ local function lock_and_update_moving_piece(stats, fall, next_piece)
   for line_y = moving_piece.y + 1, max_line_y do
     local is_full_line = true
     for x = 1, board_size.x do
-      if board[x][line_y] == 0 then is_full_line = false end
+      if board[x][line_y] == val.empty then is_full_line = false end
     end
     if is_full_line then
       -- Remove the line at line_y.
