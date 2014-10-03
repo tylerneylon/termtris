@@ -653,9 +653,55 @@ to the upper-left of where the moving piece will be rendered.
 
 ---
 
-### Functions 7 etc (TODO)
+### Function 7: Making pieces fall
+
+The game is no fun unless the pieces fall at a reliably
+constant speed that increases with the level.
+
+If we called `sleep` or `posix.nanosleep` to wait until the
+next falling moment, the piece wouldn't respond to user key
+presses quickly enough. That's why the game cycle is much
+faster than the fall cycle.
+
+The fall speed is tracked by these values:
+
+* `fall.interval` - The floating-point number of seconds between falling motions.
+* `fall.last_at` - The timestamp of the last fall motion, also in floating-point seconds.
+
+We use `posix.gettimeofday()` to get microsecond-resolution timestamps.
+
+It's also up to this function to do nothing if the game is over or paused,
+and to call `lock_and_update_moving_piece` if the piece has hit bottom.
 
 --]]
+
+    function lower_piece_at_right_time(stats, fall, next_piece)
+      -- This function does nothing if the game is paused or over.
+      if game_state ~= 'playing' then return end
+
+      local timeval = posix.gettimeofday()
+      local timestamp = timeval.sec + timeval.usec * 1e-6
+      if fall.last_at == nil then fall.last_at = timestamp end
+
+      -- Do nothing until it's been fall.interval seconds since the last fall.
+      if timestamp - fall.last_at < fall.interval then return end
+
+      if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
+        lock_and_update_moving_piece(stats, fall, next_piece)
+      end
+      fall.last_at = timestamp
+    end
+
+--[[
+
+---
+
+### Functions 8-10: Drawing the screen
+
+(TODO)
+
+--]]
+
 
     -- Accepts integer values corresponding to the 'colors' table
     -- created by init. For example, call 'set_color(colors.black)'.
@@ -722,23 +768,6 @@ to the upper-left of where the moving piece will be rendered.
       call_fn_for_xy_in_piece(piece, draw_point, x_margin)
 
       stdscr:refresh()
-    end
-
-    function lower_piece_at_right_time(stats, fall, next_piece)
-      -- This function does nothing if the game is paused or over.
-      if game_state ~= 'playing' then return end
-
-      local timeval = posix.gettimeofday()
-      local timestamp = timeval.sec + timeval.usec * 1e-6
-      if fall.last_at == nil then fall.last_at = timestamp end
-
-      -- Do nothing until it's been fall.interval seconds since the last fall.
-      if timestamp - fall.last_at < fall.interval then return end
-
-      if not set_moving_piece_if_valid({y = moving_piece.y + 1}) then
-        lock_and_update_moving_piece(stats, fall, next_piece)
-      end
-      fall.last_at = timestamp
     end
 
     ------------------------------------------------------------------
