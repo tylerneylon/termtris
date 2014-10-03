@@ -70,7 +70,7 @@ functions, including higher-resolution timestamps.
 
 Here are our module imports:
 
-<!--]]-->
+--]]
 
     local curses = require 'curses'
     local posix  = require 'posix'
@@ -114,7 +114,7 @@ a short delay to avoid using 100% of the cpu.
 Below is the main function. We'll examine each of the called
 functions as we define them.
 
-<!--]]-->
+--]]
 
     function main()
       local stats, fall, colors, next_piece = init()
@@ -154,7 +154,7 @@ Even though the `shape` variable - and others defined below - are global to this
 them with the `local` keyword so that any other Lua code importing this file won't have
 these variables in scope. In a sense, they become 'locally global.'
 
-<!--]]-->
+--]]
 
     -- Set up one orientation of each shape.
 
@@ -200,7 +200,7 @@ We'll use globals to conceptually track the following items:
 We'll use strings values to track if the game is playing, paused, or over. This would be a good
 place to use an enum, but Lua doesn't have an enum equivalent.
 
-<!--]]-->
+--]]
 
     local game_state = 'playing'  -- Could also be 'paused' or 'over'.
 
@@ -230,7 +230,7 @@ We actually start with an empty `board` table that is filled in by the `init` fu
 The `val` variable exists so we can write code like `board[x][y] == val.border` instead
 of the more cryptic `board[x][y] == -1`; and similarly for `val.empty` instead of 0.
 
-<!--]]-->
+--]]
 
 
 
@@ -244,7 +244,7 @@ of the more cryptic `board[x][y] == -1`; and similarly for `val.empty` instead o
 Next are the remaining globals for the `curses` library's standard screen object and
 tracking the currently moving piece.
 
-<!--]]-->
+--]]
 
     local stdscr = nil  -- This will be the standard screen from the curses library.
     local moving_piece = {}  -- Keys will be: shape, rot_num, x, y.
@@ -270,7 +270,7 @@ Let's see how each of these happen.
 
 This is important since otherwise the player will see the same piece sequence every game.
 
-<!--]]-->
+--]]
 
     function init()
       -- Use the current time's microseconds as our random seed.
@@ -293,7 +293,7 @@ followed by a translation to get us back into positive `(x, y)` space.
 This rotation method is
 captured in the line `new_shape[x][y] = s[y][x_end - x]` in the loop below.
 
-<!--]]-->
+--]]
 
       -- Set up the shapes table.
       for s_index, s in ipairs(shapes) do
@@ -321,7 +321,7 @@ The curses library requires initialization by calling its `initscr` function,
 and by setting a number of options appropriate for a terminal-based game.
 The individual comments in the code describe what each function achieves.
 
-<!--]]-->
+--]]
 
       -- Start up curses.
       curses.initscr()    -- Initialize the curses library and the terminal screen.
@@ -343,7 +343,7 @@ For clearer code, we'll use a table called `colors`. Later we'll define a `set_c
 function so that we can simply call `set_color(colors.red)` in order to print red
 characters to the screen.
 
-<!--]]-->
+--]]
 
       -- Set up colors.
       curses.start_color()
@@ -369,7 +369,7 @@ characters to the screen.
 All of our character drawing happens through this object. It is also the object
 we use to make character input non-blocking, and to accept arrow keys.
 
-<!--]]-->
+--]]
 
       -- Set up our standard screen.
       stdscr = curses.stdscr()
@@ -383,7 +383,7 @@ we use to make character input non-blocking, and to accept arrow keys.
 As mentioned above, the board is mostly 0's with a U-shaped
 border of -1 values along the left, right, and bottom edges.
 
-<!--]]-->
+--]]
 
       -- Set up the board.
       local border = {x = board_size.x + 1, y = board_size.y + 1}
@@ -406,7 +406,7 @@ moving piece in the `moving_piece` table. The `next_piece` table needs only
 track the shape of the next piece. The `stats` table tracks lines, level, and
 score; the `fall` table tracks when and how quickly the moving piece falls.
 
-<!--]]-->
+--]]
 
       -- Set up the next and currently moving piece.
       moving_piece = {shape = math.random(#shapes), rot_num = 1, x = 4, y = 0}
@@ -423,7 +423,7 @@ score; the `fall` table tracks when and how quickly the moving piece falls.
 
 #### End of `init`: return local values.
 
-<!--]]-->
+--]]
 
       return stats, fall, colors, next_piece
     end
@@ -445,7 +445,7 @@ keys, and a value like `curses.KEY_LEFT` for the arrow keys.
 
 First is the code to collect the `key` value and handle quitting or pausing/unpausing.
 
-<!--]]-->
+--]]
 
     function handle_input(stats, fall, next_piece)
       local key = stdscr:getch()  -- Nonblocking; returns nil if no key was pressed.
@@ -477,7 +477,7 @@ until it hits something. We use a simple loop to achieve this, this time using t
 value from `set_moving_piece_if_valid` to know when the piece has hit the bottom, at which
 point it's locked in palce.
 
-<!--]]-->
+--]]
 
       if game_state ~= 'playing' then return end  -- Arrow keys only work if playing.
 
@@ -503,7 +503,7 @@ point it's locked in palce.
 
 *TODO add notes here*
 
-<!--]]-->
+--]]
 
 
     -- Returns true iff the move was valid.
@@ -539,7 +539,7 @@ point it's locked in palce.
 
 ### Functions 6 etc (TODO)
 
-<!--]]-->
+--]]
 
     -- Accepts integer values corresponding to the 'colors' table
     -- created by init. For example, call 'set_color(colors.black)'.
