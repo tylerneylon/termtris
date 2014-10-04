@@ -753,6 +753,11 @@ non-black colors, those 7 have been used for the pieces, and the
 border is rendered with a different character to visually clarify
 the edge of the board.
 
+If the game is paused and a space character is being drawn, then
+`draw_piece` returns early. This is how no pieces - including the
+next piece - are rendered when the game is paused; the border is
+still drawn.
+
 --]]
 
 
@@ -767,7 +772,23 @@ the edge of the board.
 
 --[[
 
-(TODO)
+The `draw_screen` function begins by erasing the screen
+and recalculating the x coordinates of the left edge of the board -
+which we call the `x_margin` - and of the stats on the right
+side of the board - which we call `x_labels`.
+These are constantly recalculated because it's cheap to do so
+and because the player may resize their terminal at any time.
+
+It may be worth explaining this line:
+
+* `local win_width = 2 * (board_size.x + 2) + 16`
+
+The `win_width` value represents the width, in characters, that
+we may render to. We want it to be smaller than `scr_width`.
+The `board_size.x + 2` value is the board width in cells,
+plus 2 border cells; this value is converted to characters by
+being doubled. The `+ 16` is meant to give 16 characters of room
+in which to render the player stats and next piece.
 
 --]]
 
@@ -780,6 +801,15 @@ the edge of the board.
       local win_width = 2 * (board_size.x + 2) + 16
       local x_margin = math.floor((scr_width - win_width) / 2)
       local x_labels = x_margin + win_width - 10
+
+--[[
+
+Next we draw the board, including all previously-fallen pieces.
+Because the currently-moving piece is not represented in `board`,
+it's not drawn yet. The `draw_point` function avoids drawing
+pieces for us if the game is paused.
+
+--]]
 
       -- Draw the board's border and non-falling pieces if we're not paused.
       local color_of_val = {[val.border] = colors.text, [val.empty] = colors.black}
@@ -794,6 +824,14 @@ the edge of the board.
         end
       end
 
+--[[
+
+We either draw the string 'paused' in the middle of the board
+or render the moving piece, depending on if the game state is paused
+or playing.
+
+--]]
+
       -- Write 'paused' if the we're paused; draw the moving piece otherwise.
       if game_state == 'paused' then
         set_color(colors.text)
@@ -804,6 +842,13 @@ the edge of the board.
         call_fn_for_xy_in_piece(moving_piece, draw_point, x_margin)
       end
 
+--[[
+
+Now we draw the player's lines, score, and level stats, along with
+a "Game Over" message if the game is over.
+
+--]]
+
       -- Draw the stats: level, lines, and score.
       set_color(colors.text)
       stdscr:mvaddstr( 9, x_labels, 'Level ' .. stats.level)
@@ -812,6 +857,15 @@ the edge of the board.
       if game_state == 'over' then
         stdscr:mvaddstr(16, x_labels, 'Game Over')
       end
+
+--[[
+
+Finally we render the next piece between top and bottom
+lines to suggest a "next piece" box. The function ends with
+a call to `stdscr:refresh`, which tells the `curses` library to
+batch up all our drawing operations and send them to the terminal.
+
+--]]
 
       -- Draw the next piece.
       set_color(colors.text)
@@ -824,8 +878,17 @@ the edge of the board.
       stdscr:refresh()
     end
 
-    ------------------------------------------------------------------
-    -- Main.
-    ------------------------------------------------------------------
+--[[
+
+Until now, we have only defined variables and functions.
+No code has been executed. It's time to call `main`!
+
+--]]
 
     main()
+
+--[[
+
+That's the whole game - have fun!
+
+--]]
