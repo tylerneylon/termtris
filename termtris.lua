@@ -698,7 +698,23 @@ and to call `lock_and_update_moving_piece` if the piece has hit bottom.
 
 ### Functions 8-10: Drawing the screen
 
-(TODO)
+The last function called from `main` is `draw_screen`,
+which renders the board, player stats, and next piece to
+the terminal window.
+
+Before defining `draw_screen` itself, we'll set up two
+convenience functions to make drawing easier.
+
+The first is the one-line `set_color` function, which
+wraps the confusingly-named `stdscr:attron` function.
+The input to `stdscr:attron` is an output value from
+`curses.color_pair`, which accepts the same integer
+values we sent in to `curses.init_pair` back in our
+`init` function. The entire purpose of `set_color`
+is to clarify that the operation performed by
+`attron` is setting a color, and to simplify the
+relationship between our `colors` table and the
+act of setting a color.
 
 --]]
 
@@ -709,6 +725,37 @@ and to call `lock_and_update_moving_piece` if the piece has hit bottom.
       stdscr:attron(curses.color_pair(c))
     end
 
+--[[
+
+The `draw_point` function essentially draws a simple
+sprite on the screen. This sprite is usually a solid-color
+square rendered as two adjacent space characters since most
+terminals draw a single space as a tall rectangle with an
+aspect ratio near 1:2.
+
+This function works with a coordinate system whose origin
+is offset by a given `x_offset` column value. In this program,
+`x_offset` is *always* going to be the left edge of the game
+board as determined in `draw_screen`. The code is set up to
+accept `x_offset` as a parameter because:
+
+* It depends on `board_size`, and it's nice to make the rest of the
+  code "just work" if `board_size` is changed.
+* We can avoid a global variable by accepting
+  `x_offset` as a parameter.
+
+The last two parameters are optional.
+If present, the `color` parameter sets the color, and the `point_char`
+parameter sets the character drawn. The only time we don't draw
+space characters is when rendering the border, where we use the
+'|' vertical bar character. Since `curses` only guarantees 7
+non-black colors, those 7 have been used for the pieces, and the
+border is rendered with a different character to visually clarify
+the edge of the board.
+
+--]]
+
+
     function draw_point(x, y, x_offset, color, point_char)
       point_char = point_char or ' '
       if color then set_color(color) end
@@ -717,6 +764,13 @@ and to call `lock_and_update_moving_piece` if the piece has hit bottom.
       stdscr:mvaddstr(y, x_offset + 2 * x + 0, point_char)
       stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
     end
+
+--[[
+
+(TODO)
+
+--]]
+
 
     function draw_screen(stats, colors, next_piece)
       stdscr:erase()
