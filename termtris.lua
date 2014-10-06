@@ -2,8 +2,9 @@
 
 # termtris: a game like tetris in ten functions
 
-This is a literate implementation of a tetris-like game
-called `termtris`. You may be reading this as an html-ified version -
+This is a literate implementation of a
+tetris-like game called `termtris`.
+You may be reading this as an html-ified version -
 but the original,
 [`termtris.lua`](https://github.com/tylerneylon/termtris/blob/master/termtris.lua),
 is simultaneously a Lua file and markdown file.
