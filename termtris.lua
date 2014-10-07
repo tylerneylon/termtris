@@ -96,6 +96,7 @@ The code we'll examine has a total of 10 functions, and a little over
 200 non-blank, non-comment lines of code:
 
 ```
+$ # (This is a bash line, not part of the Lua code!)
 $ egrep -v '^\s*(--|$)' nonliterate/plain_termtris.lua | wc -l
 232
 ```
