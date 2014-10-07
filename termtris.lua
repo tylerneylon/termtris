@@ -9,8 +9,8 @@ but the original,
 [`termtris.lua`](https://github.com/tylerneylon/termtris/blob/master/termtris.lua),
 is simultaneously a Lua file and a markdown file.
 In the original file,
-all the text between the &dash;-[[ and &dash;-]] comment delimiters are markdown, while
-everything else is code.
+all the text between the --[&lbrack; and --]&rbrack; comment delimiters are markdown
+while everything else is code.
 
 ```
 -- This is an example of a code block. Taken together, all the code
@@ -64,8 +64,8 @@ Here are the game controls:
 Even if you're new to Lua, I think you'll find it easy to understand
 the code. I'll mention a few things that may not be obvious:
 
-* Block comments are between &dash;-[[ and &dash;-]]; line-tail comments
-  start with `--`.
+* Block comments are between <code>--[&lbrack;</code> and
+  <code>--]&rbrack;</code>. Line-tail comments start with `--`.
 * An assignment like `a, b, c = f()` calls `f` and assigns all of `f`'s
   return values to `a`, `b`, and `c` in order — not just to `c`.
 * The *only* compound data table is called a *table*, and it's an associative
