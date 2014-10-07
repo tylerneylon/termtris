@@ -92,17 +92,36 @@ all of the code. For a tad more depth, some crazy guy claims you can
 
 ## Making a tetris-like game
 
-Tetris is a simple yet engrossing game. Making a tetris-like game is a great exercise to
+Tetris is a simple yet absorbing game. Making a tetris-like game is a great exercise to
 understand some common structures in game code.
 
 The code we'll examine has a total of 10 functions, and a little over
-200 non-blank, non-comment lines of code.
+200 non-blank, non-comment lines of code:
+
+```
+$ egrep -v '^\s*(--|$)' nonliterate/plain_termtris.lua | wc -l
+232
+```
 
 This is small for a game.
 
 The point is not to minimize the size of the code, however. The point is to
 maximize readability. We could have used fewer functions and fewer lines, but
 beyond a certain point the compressed code becomes more cryptic than simple.
+
+### Overview
+
+Here's the complete call graph for `termtris`:
+
+![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/termtris_call_graph.png)
+
+The `main` function initializes our data and then enters a game loop
+in which we consistently check for input, drop the moving piece if the time
+is right, and update what is drawn on the screen.
+
+We'll understand the full code by looking at the libraries used for drawing and
+timing, then going through the code more-or-less in the order that it's
+executed.
 
 ### Libraries
 
