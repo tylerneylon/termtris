@@ -1,29 +1,38 @@
 --[[
 
-# termtris: a game like tetris in ten functions
+# termtris: A Game like Tetris in Ten Functions
 
 This is a literate implementation of a
 tetris-like game called `termtris`.
 You may be reading this as an html-ified version -
 but the original,
 [`termtris.lua`](https://github.com/tylerneylon/termtris/blob/master/termtris.lua),
-is simultaneously a Lua file and markdown file.
-This file is a runnable game with markdown-syntax
-comments that explain how it works
-in more depth than a typical source file.
+is simultaneously a Lua file and a markdown file.
+In the original file,
+all the text between the &dash;-[[ and &dash;-]] comment delimiters are markdown, while
+everything else is code.
+
+```
+-- This is an example of a code block. Taken together, all the code
+-- blocks in this document compose the complete termtris game.
+```
 
 ![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/sample.gif)
 
 This code has been written with an emphasis on readability
-and learn-from-ability. I hope these comments can be useful
-to you if you'd like to learn how to make games like tetris.
+and learn-from-ability. I hope these comments are useful to anyone
+interested in how a game like tetris can be made.
+The code is written in Lua, but I've put some effort into making
+this document friendly to coders who are new to Lua.
 
 On github.com, the `readme.md` is a symbolic link to `termtris.lua`
 to enable easy reading from
 [the repo's home page](https://github.com/tylerneylon/termtris).
-If you prefer reading non-literate source,
-you can look at the non-literate file
-[plain_termtris.lua](https://github.com/tylerneylon/termtris/blob/master/plain_termtris.lua).
+A nonliterate version of the code is in the file
+[`plain_termtris.lua`](https://github.com/tylerneylon/termtris/blob/master/nonliterate/plain_termtris.lua).
+
+I'll tell you how you can download and play `termtris`, and
+then we'll dive into the code.
 
 ## Playing the game
 
