@@ -92,6 +92,10 @@ all of the code. For a tad more depth, some crazy guy claims you can
 
 ## The Code
 
+This code has been written to maximize readability. This is hard to measure.
+We can get a quantifiable hint that the code is not too daunting by consider its
+line count and function count.
+
 The code we'll examine has a total of 10 functions, and a little over
 200 non-blank, non-comment lines of code:
 
@@ -101,11 +105,9 @@ $ egrep -v '^\s*(--|$)' nonliterate/plain_termtris.lua | wc -l
 231
 ```
 
-This is small for a game.
-
-The point is not to minimize the size of the code, however. The point is to
-maximize readability. We could have used fewer functions and fewer lines, but
+This is small for a game. We could have used even fewer functions or fewer lines, but
 beyond a certain point the compressed code becomes more cryptic than simple.
+The trick is to find a balance between brevity and clarity.
 
 ### Overview
 
