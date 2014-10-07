@@ -980,6 +980,25 @@ No code has been executed. It's time to call the main function!
 
 --[[
 
-That's the whole game - have fun!
+That's the whole game.
+
+## Learning More
+
+If you enjoyed this, you might like further exploration of Lua and
+my favorite 2D game engine, Löve, which adds modern 2D graphics capabilities
+to Lua. Here are some diving boards into more
+game-making fun:
+
+* Another shameless plug for
+  [learning Lua in 15 minutes](http://tylerneylon.com/a/learn-lua/).
+* The [Löve game engine home page](http://love2d.org/).
+* [awesome-lua](https://github.com/LewisJEllis/awesome-lua), a curated
+  list of Lua packages and resources.
+* [Programming in Lua](http://www.lua.org/pil/contents.html) — an in-depth look at Lua 5.0, which
+  is now a teeny bit out of date, but is well-written!
+* [Mari0](http://stabyourself.net/mari0/), a combination of the original
+  Super Mario Brothers plus Portal. Written in Lua + Löve.
+
+Have fun!
 
 --]]
