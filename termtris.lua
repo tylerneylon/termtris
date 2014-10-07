@@ -59,6 +59,37 @@ Here are the game controls:
 | `p`                | pause or unpause                 |
 | `q`                | quit                             |
 
+## Reading Lua
+
+Even if you're new to Lua, I think you'll find it easy to understand
+the code. I'll mention a few things that may not be obvious:
+
+* Block comments are between &dash;-[[ and &dash;-]]; line-tail comments
+  start with `--`.
+* An assignment like `a, b, c = f()` calls `f` and assigns all of `f`'s
+  return values to `a`, `b`, and `c` in order — not just to `c`.
+* The *only* compound data table is called a *table*, and it's an associative
+  array that can map any non-nil Lua value to any other.
+* Things inside curly braces `{}` are table literals.
+  A literal like `a = {x, y}` has values `a[1] == x` and `a[2] == y`.
+  Table literals can be nested: if `a = {{x}, {y}}`, then `a[2][1] == y`.
+* If `pi == 3.141`, then the literal `b = {w = 1, [pi] = 2}` results in
+  `b.w == b['w'] == 1` and `b[pi] == 2`; that is, identifiers to the left of `=`
+  are string keys and
+  keys inside brackets `[]` are treated as general expressions.
+* An undefined table index is not an error, it just returns `nil`, which is falsy.
+  For example, `a = {key1 = 'hi', key2 = 'there'}`; now `a.key3` is a valid
+  expression with value `nil`.
+* A table `t` can be iterated over with the pattern
+  `for k, v in pairs(t) do my_fn(k, v) end`. If `t` is treated as an array —
+  if it has sequential integer keys starting at 1 — then `ipairs` can be used
+  instead of `pairs` to ensure the keys are given in order:
+  `for i, v in ipairs(t) do my_fn(i, v) end`.
+
+Armed with that lightning flash of a Lua introduction, I believe you can understand
+all of the code. For a tad more depth, some crazy guy claims you can
+[learn the language in 15 minutes](http://tylerneylon.com/a/learn-lua/).
+
 ## Making a tetris-like game
 
 Tetris is a simple yet engrossing game. Making a tetris-like game is a great exercise to
