@@ -22,7 +22,7 @@ while everything else is code.
 This code has been written with an emphasis on readability
 and learn-from-ability. I hope these comments are useful to anyone
 interested in how a game like tetris can be made.
-The code is written in Lua, but I've put some effort into making
+I've put some effort into making
 this document friendly to coders who are new to Lua.
 
 On github.com, the `readme.md` is a symbolic link to `termtris.lua`
@@ -67,17 +67,18 @@ the code. I'll mention a few things that may not be obvious:
 * Block comments are between `--[​[` and `--]​]`. Line-tail comments start with `--`.
 * An assignment like `a, b, c = f()` calls `f` and assigns all of `f`'s
   return values to `a`, `b`, and `c` in order — not just to `c`.
-* The *only* compound data table is called a *table*, and it's an associative
+* The token `~=` is the not-equal-to operator.
+* The *only* compound data structure is called a *table*. It's an associative
   array that can map any non-nil Lua value to any other.
 * Things inside curly braces `{}` are table literals.
-  A literal like `a = {x, y}` has values `a[1] == x` and `a[2] == y`.
+  The literal `a = {x, y}` has values `a[1] == x` and `a[2] == y`.
   Table literals can be nested: if `a = {{x}, {y}}`, then `a[2][1] == y`.
 * If `pi == 3.141`, then the literal `b = {w = 1, [pi] = 2}` results in
   `b.w == b['w'] == 1` and `b[pi] == 2`; that is, identifiers to the left of `=`
   are string keys and
   keys inside brackets `[]` are treated as general expressions.
-* An undefined table index is not an error, it just returns `nil`, which is falsy.
-  For example, `a = {key1 = 'hi', key2 = 'there'}`; now `a.key3` is a valid
+* Using an undefined table key is not an error — it just returns `nil`, which is falsy.
+  For example, if `a = {key1 = 'hi', key2 = 'there'}`, then `a.key3` is a valid
   expression with value `nil`.
 * We can iterate over the keys and values of table `t` with the pattern
   `for k, v in pairs(t) do my_fn(k, v) end`. If `t` is treated as an array —
@@ -97,7 +98,7 @@ The code we'll examine has a total of 10 functions, and a little over
 ```
 $ # (This is a bash line, not part of the Lua code!)
 $ egrep -v '^\s*(--|$)' nonliterate/plain_termtris.lua | wc -l
-232
+231
 ```
 
 This is small for a game.
@@ -140,7 +141,10 @@ We'd like pieces to move faster than once per second! To achieve this, we
 import the `posix` library, which gives us access to more advanced posix
 functions, including higher-resolution timestamps.
 
-Here are our module imports:
+Below are our module imports. This is the first "real"
+code block, unlike the non-running example code sections above.
+From here till the end, all code blocks are part of
+the official program.
 
 --]]
 
@@ -206,21 +210,22 @@ functions as we define them.
 
 ### Shape data
 
-Next let's set up all the possible shapes the player might see.
-We'll do this by setting up a single global table called `shapes`.
+Next let's set up all possible shape pieces.
+We'll use a global table called `shapes` for this.
 
-There are seven possible shapes:
+There are seven possibilities:
 
 ![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/the_seven_shapes.png)
 
-We'll set up the `shapes` table to be indexed first by shape number (1-7), and
+The `shapes` table will be indexed first by shape number (1-7), and
 then by a rotation number (1-4). So `s = shapes[5][1]` represents shape number 5 in its
 first rotation orientation. This variable `s` represents the shape so that `s[x][y]` is
-either 0 or 1; it's value is 1 if the shape exists in the given `(x, y)` cell.
+either 0 or 1; its value is 1 if the shape exists in the given `(x, y)` cell.
 
-There are 7 shapes and 4 rotated orientations, given 28 possible shape grids. Instead of
-initializing all of them by hand, we'll set up one rotation of each, and include some
-code in `init` that expands the `shapes` variable to include all 28 possibilities.
+There are 7 shapes and 4 rotated orientations for each, giving 28 possible shape grids.
+Instead of initializing all of them by hand, we'll set up one orientation of each shape,
+and include some code in `init` that expands the `shapes` variable to include all
+28 possibilities.
 
 Even though the `shape` variable - and others defined below - are global to this file, we declare
 them with the `local` keyword so that any other Lua code importing this file won't have
@@ -267,6 +272,8 @@ We'll use globals to conceptually track the following items:
 | `stdscr`            | A `curses`-library window object for drawing to the screen.                     |
 | `moving_piece`      | Which piece is currently falling: it has keys `shape`, `rot_num`, `x`, and `y`. |
 
+The name `rot_num` is used for rotation numbers.
+
 #### Game state
 
 We'll use strings values to track if the game is playing, paused, or over. This would be a good
@@ -281,16 +288,16 @@ place to use an enum, but Lua doesn't have an enum equivalent.
 #### What's on the board
 
 We'll use an 11x20 board size. Traditional tetris games are usually 10x20, but I'm purposefully
-putting in some small differences in hopes of not getting sued.
+putting in some differences in hopes of not getting sued.
 
 The game area where pieces may live is represented by values in `board[x][y]` where
-1 ≤ x ≤ board_size.x and 1 ≤ y ≤ board_size.y. The `board` variable also includes a U-shaped
-border with `board[x][y] == -1` where any of the following are true:
-* x = 0,
-* x = `board_size.x` + 1, or
-* y = `board_size.y` + 1.
+1 ≤ x ≤ `board_size.x` and 1 ≤ y ≤ `board_size.y`. The `board` variable also includes a U-shaped
+border with `board[x][y] == -1` when any of the following are true:
+* `x == 0`,
+* `x == board_size.x + 1`, or
+* `y == board_size.y + 1`.
 
-When a shape is locked in place - that is, after it's done falling - we update the affected
+When a shape is locked in place — that is, after it's done falling — we update the affected
 cells in `board` by setting them to the shape number. This works since our shape numbers
 are all > 0, so that 0 itself can represent empty cells.
 
@@ -307,7 +314,7 @@ of the more cryptic `board[x][y] == -1`; and similarly for `val.empty` instead o
 
 
     local board_size = {x = 11, y = 20}
-    local board = {}                      -- board[x][y] = <piece at x, y>; 0 = empty, -1 = border.
+    local board = {}                      -- board[x][y] = shape_num; 0=empty; -1=border.
     local val = {border = -1, empty = 0}  -- Shorthand to avoid magic numbers.
 
 
@@ -332,7 +339,7 @@ The `init` function takes care of all of these:
 
 * Seed the random number generator.
 * Expand the `shapes` table to include all shape rotations.
-* Initialize the `curses` library to draw with colored text.
+* Initialize the `curses` library and enable colored text rendering.
 * Set up the `board` variable.
 * Set up the player stats and the next and currently-moving piece.
 
@@ -350,17 +357,19 @@ This is important since otherwise the player will see the same piece sequence ev
 
 --[[
 
-#### Set up the shapes table.
+#### Set up the shapes table
 
 Before this code, `shapes[shape_index][rot_num]` exists only when
 `rot_num == 1`. So we have to take `shapes[shape_index][1]` and rotate it
 into `shapes[shape_index][i]` for `i` = 2, 3, 4.
 
-A simple way to perform a 90 degree rotation is to find the value for rotated grid point
-`(x, y)` at old grid point `(y, -x)`. In our case, negative or zero `x` values don't make
-sense - we want the minimum coordinate to be 1. So instead of looking at `(y, -x)`, we'll
-look at `(y, max_x + 1 - x)`. Mathematically, this is like a rotation around `(0, 0)`
-followed by a translation to get us back into positive `(x, y)` space.
+A simple mathematical way to perform a 90 degree rotation is to treat the point
+`(x, y)` as the value rotated from `(y, -x)`. In our case, these coordinates are
+table indexes, such as `shapes[shape_index][rot_num][x][y]`, so `x` and `y` are only
+meaningful when they're positive integers. Instead of starting at `(y, -x)` to rotate
+to `(x, y)`, we'll start at `(y, max_x + 1 - x)`. Mathematically, this is
+like a rotation around `(0, 0)` followed by a translation to keep us in positive
+`(x, y)` space.
 
 This rotation method is
 captured in the line `new_shape[x][y] = s[y][x_end - x]` in the loop below.
@@ -371,7 +380,7 @@ captured in the line `new_shape[x][y] = s[y][x_end - x]` in the loop below.
       for s_index, s in ipairs(shapes) do
         shapes[s_index] = {}
         for rot_num = 1, 4 do
-          -- Rotate shape s by 90 degrees.
+          -- Set up new_shape as s rotated by 90 degrees.
           local new_shape = {}
           local x_end = #s[1] + 1  -- Chosen so that x_end - x is in [1, x_max].
           for x = 1, #s[1] do      -- Coords x & y are indexes for the new shape.
@@ -387,11 +396,11 @@ captured in the line `new_shape[x][y] = s[y][x_end - x]` in the loop below.
 
 --[[
 
-#### Start curses.
+#### Start curses
 
 The curses library requires initialization by calling its `initscr` function,
 and by setting a number of options appropriate for a terminal-based game.
-The individual comments in the code describe what each function achieves.
+The individual comments in the code describe what each function does.
 
 --]]
 
@@ -404,16 +413,17 @@ The individual comments in the code describe what each function achieves.
 
 --[[
 
-#### Set up colors.
+#### Set up colors
 
 Each piece in `termtris` has its own color. The `curses` library requires registering
 an integer for each foreground/background color pair that we want to use. This is
-done by calling `curses.init_pair(<my_color_index>, <color1>, <color2>)`; the input
+done by calling `curses.init_pair(<my_color_index>, <fgcolor>, <bgcolor>)`; the input
 colors are based on constants such as `curses.COLOR_RED`.
 
-For clearer code, we'll use a table called `colors`. Later we'll define a `set_color`
+For clearer code, we'll use a table called `colors` to refer to the color indexes
+we register with `curses.init_pair`. Later we'll define a `set_color`
 function so that we can simply call `set_color(colors.red)` in order to print red
-characters to the screen.
+characters to the screen, for example.
 
 --]]
 
@@ -436,7 +446,7 @@ characters to the screen.
 
 --[[
 
-#### Set up the standard screen object.
+#### Set up the standard screen object
 
 All of our character drawing happens through this object. It is also the object
 we use to make character input non-blocking, and to accept arrow keys.
@@ -450,7 +460,7 @@ we use to make character input non-blocking, and to accept arrow keys.
 
 --[[
 
-#### Set up the board.
+#### Set up the board
 
 As mentioned above, the board is mostly 0's with a U-shaped
 border of -1 values along the left, right, and bottom edges.
@@ -471,7 +481,7 @@ border of -1 values along the left, right, and bottom edges.
 
 --[[
 
-#### Set up player stats and the next and falling pieces.
+#### Set up player stats and the next and falling pieces
 
 We track the position, orientation, and shape number of the currently
 moving piece in the `moving_piece` table. The `next_piece` table needs only
@@ -493,7 +503,7 @@ score; the `fall` table tracks when and how quickly the moving piece falls.
 
 --[[
 
-#### End of `init`: return local values.
+#### Return local values
 
 --]]
 
@@ -509,7 +519,7 @@ score; the `fall` table tracks when and how quickly the moving piece falls.
 Our main game loop is set up so that the `handle_input` function gets called at most once every
 0.005 seconds - that is, up to 200 times each second. Most of the time, the player
 will not have pressed a key between since the last time we called `handle_input`, in which
-case our `stdscr:getch` call returns `nil`, and we can return immediately.
+case our `stdscr:getch` call returns `nil`, and `handle_input` can return immediately.
 
 Otherwise, we want to listen for and respond to the arrow keys and the `p` or `q` keys.
 The `getch` function returns an integer key code which is a standard ascii value for conventional
@@ -538,14 +548,16 @@ First is the code to collect the `key` value and handle quitting or pausing/unpa
 
 Next we handle the arrow keys.
 
-We stop looking at the input in case the game is paused or over.
+Our first action is to return from `handle_input` if the
+game is not in a state that responds to arrow keys — that is,
+we ignore arrow keys when the game is paused or over.
 
 After that, we can handle left, right, or up arrow keys with a simple incremental-change
 table sent in to the `set_moving_piece_if_valid` function. This function will only perform
 valid moves, and leaves the piece alone if the suggested move was invalid.
 
 The down arrow action is less obvious, as we want to move the piece down as far as we can
-until it hits something. We use a simple loop to achieve this, this time using the return
+until it hits something. A simple loop achieves this by using the return
 value from `set_moving_piece_if_valid` to know when the piece has hit the bottom, at which
 point it's locked in palce.
 
@@ -576,24 +588,26 @@ point it's locked in palce.
 The `set_moving_piece_if_valid` function accepts a table
 that suggests new values for the `moving_piece`.
 If those new values are valid, `moving_piece` is updated
-and the function returns `true`; otherwise it returns false.
+and the function returns `true`; otherwise it returns `false`.
 
 This function is used for all piece movements: left, right,
-rotation, dropping, and even when getting a new piece after
-the previous piece has hit the bottom.
+rotation, dropping, and even when setting up a new piece after
+the previous piece has hit the bottom. A new piece may be in
+an invalid position if the board has filled to the top, in which
+case the game is over.
 
 Because the board's border is included in the `board` variable,
 the only check we have to make is that `board[x][y] == val.empty`
 for every cell occupied by the new piece values.
 
 We'll rely on a function called `call_fn_for_xy_in_piece` that
-helpfully iterates over all `(x, y)` offset values occupied by
-a given piece. We'll describe this utility function next.
+helpfully iterates over all `(x, y)` values occupied by
+a given piece.
 
 --]]
 
 
-    -- Returns true iff the move was valid.
+    -- Returns true if and only if the move was valid.
     function set_moving_piece_if_valid(piece)
       -- Use values of moving_piece as defaults.
       for k, v in pairs(moving_piece) do
@@ -609,9 +623,16 @@ a given piece. We'll describe this utility function next.
 
 --[[
 
-The function `call_fn_for_xy_in_piece` accepts a callback function, and calls
-that callback once for each `(x, y)` position in the given piece. This makes it
-easy to draw the piece or check if it's in a valid location.
+The function `call_fn_for_xy_in_piece` makes it
+easy to draw the piece or check if it's in a valid location. It accepts
+a callback that is called with each `(x, y)` value in the given piece.
+
+It also accepts an optional `param` value that is passed straight through
+to the callback with every call. In Lua, if you omit parameters when making a
+function call, the left-out values are seen as `nil` by the function.
+If you call a function with extra values set to `nil`, it is functionally the same
+as if those parameters were not sent in, regardless of how many parameters a
+function officially accepts. This is how `param` works as an optional parameter.
 
 There are other ways this could have been implemented. We could have instead named this
 function `piece_coords` and defined it as a Lua *iterator*. In that case,
@@ -639,7 +660,7 @@ to Lua newbies.
 
 ---
 
-### Function 6: When a piece hits the bottom
+### Function 6: When a Piece Hits the Bottom
 
 The next function handles everything that needs to happen when a piece hits
 bottom. Once we define this function, we'll have completed all the code
@@ -664,7 +685,7 @@ The code to make the moving piece part of the board is simple:
 --[[
 
 Next we look for affected rows of `board` which have no empty cells;
-we call these "full lines." Each one is cleared, dropping anything above
+we call these *full lines*. Each one is cleared, dropping anything above
 it downward by iterating over the line `board[x][y] = board[x][y - 1]`.
 
 We finish by incrementing the line count, the level if appropriate,
@@ -691,7 +712,7 @@ and the score.
           stats.lines = stats.lines + 1
           if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
             stats.level = stats.level + 1
-            fall.interval = fall.interval * 0.8
+            fall.interval = fall.interval * 0.8  -- The pieces will fall faster.
           end
           num_removed = num_removed + 1
         end
@@ -708,8 +729,8 @@ pieces with `y=0`
 because `call_fn_for_xy_in_piece`
 uses the expression `piece.y + y` to determine a piece's `y` values, and
 the `y` in that expression ranges from 1 up to the height of the piece.
-In other words, `moving_piece.{x,y}` is the coordinate of the cell just
-to the upper-left of where the moving piece will be rendered.
+In other words, `(moving_piece.x, moving_piece.y)` is the coordinate of the cell just
+to the upper-left of where the moving piece will be drawn.
 
 --]]
 
@@ -725,7 +746,7 @@ to the upper-left of where the moving piece will be rendered.
 
 ---
 
-### Function 7: Making pieces fall
+### Function 7: Making Pieces Fall
 
 The game is no fun unless the pieces fall at a reliably
 constant speed that increases with the level.
@@ -742,7 +763,7 @@ The fall speed is tracked by these values:
 
 We use `posix.gettimeofday()` to get microsecond-resolution timestamps.
 
-It's also up to this function to do nothing if the game is over or paused,
+It's also up to the piece-falling function to do nothing if the game is over or paused,
 and to call `lock_and_update_moving_piece` if the piece has hit bottom.
 
 --]]
@@ -753,7 +774,7 @@ and to call `lock_and_update_moving_piece` if the piece has hit bottom.
 
       local timeval = posix.gettimeofday()
       local timestamp = timeval.sec + timeval.usec * 1e-6
-      if fall.last_at == nil then fall.last_at = timestamp end
+      if fall.last_at == nil then fall.last_at = timestamp end  -- Happens at startup.
 
       -- Do nothing until it's been fall.interval seconds since the last fall.
       if timestamp - fall.last_at < fall.interval then return end
@@ -768,7 +789,7 @@ and to call `lock_and_update_moving_piece` if the piece has hit bottom.
 
 ---
 
-### Functions 8-10: Drawing the screen
+### Functions 8-10: Drawing the Screen
 
 The last function called from `main` is `draw_screen`,
 which renders the board, player stats, and next piece to
@@ -778,15 +799,12 @@ Before defining `draw_screen` itself, we'll set up two
 convenience functions to make drawing easier.
 
 The first is the one-line `set_color` function, which
-wraps the confusingly-named `stdscr:attron` function.
+wraps the not-as-clearly-named `stdscr:attron` function.
 The input to `stdscr:attron` is an output value from
 `curses.color_pair`, which accepts the same integer
 values we sent in to `curses.init_pair` back in our
 `init` function. The entire purpose of `set_color`
-is to clarify that the operation performed by
-`attron` is setting a color, and to simplify the
-relationship between our `colors` table and the
-act of setting a color.
+is to clarify the act of setting a color.
 
 --]]
 
@@ -801,7 +819,7 @@ act of setting a color.
 
 The `draw_point` function essentially draws a simple
 sprite on the screen. This sprite is usually a solid-color
-square rendered as two adjacent space characters since most
+square. A sqaure is rendered as two adjacent space characters since most
 terminals draw a single space as a tall rectangle with an
 aspect ratio near 1:2.
 
@@ -816,7 +834,7 @@ accept `x_offset` as a parameter because:
 * We can avoid a global variable by accepting
   `x_offset` as a parameter.
 
-The last two parameters are optional.
+The last two parameters to `draw_point` are optional.
 If present, the `color` parameter sets the color, and the `point_char`
 parameter sets the character drawn. The only time we don't draw
 space characters is when rendering the border, where we use the
@@ -826,15 +844,15 @@ border is rendered with a different character to visually clarify
 the edge of the board.
 
 If the game is paused and a space character is being drawn, then
-`draw_piece` returns early. This is how no pieces - including the
-next piece - are rendered when the game is paused; the border is
+`draw_piece` returns early. This way no pieces — including the
+next piece — are rendered when the game is paused; the border is
 still drawn.
 
 --]]
 
 
     function draw_point(x, y, x_offset, color, point_char)
-      point_char = point_char or ' '
+      point_char = point_char or ' '  -- Space is the default point_char.
       if color then set_color(color) end
       -- Don't draw pieces when the game is paused.
       if point_char == ' ' and game_state == 'paused' then return end
@@ -845,7 +863,7 @@ still drawn.
 --[[
 
 The `draw_screen` function begins by erasing the screen
-and recalculating the x coordinates of the left edge of the board -
+and recalculating the x coordinates of the left edge of the game board -
 which we call the `x_margin` - and of the stats on the right
 side of the board - which we call `x_labels`.
 These are constantly recalculated because it's cheap to do so
@@ -907,7 +925,7 @@ or playing.
       -- Write 'paused' if the we're paused; draw the moving piece otherwise.
       if game_state == 'paused' then
         set_color(colors.text)
-        local x = x_margin + board_size.x - 1
+        local x = x_margin + board_size.x - 1  -- Slightly left of center.
         stdscr:mvaddstr(math.floor(board_size.y / 2), x, 'paused')
       else
         set_color(moving_piece.shape)
@@ -917,7 +935,7 @@ or playing.
 --[[
 
 Now we draw the player's lines, score, and level stats, along with
-a "Game Over" message if the game is over.
+a *Game Over* message if the game is over.
 
 --]]
 
@@ -933,14 +951,13 @@ a "Game Over" message if the game is over.
 --[[
 
 Finally we render the next piece between top and bottom
-lines to suggest a "next piece" box. The function ends with
+lines to suggest a next piece box. The function ends with
 a call to `stdscr:refresh`, which tells the `curses` library to
 batch up all our drawing operations and send them to the terminal.
 
 --]]
 
       -- Draw the next piece.
-      set_color(colors.text)
       stdscr:mvaddstr(2, x_labels, '----------')
       stdscr:mvaddstr(7, x_labels, '---Next---')
       local piece = {shape = next_piece.shape, rot_num = 1, x = board_size.x + 5, y = 3}
@@ -953,7 +970,7 @@ batch up all our drawing operations and send them to the terminal.
 --[[
 
 Until now, we have only defined variables and functions.
-No code has been executed. It's time to call `main`!
+No code has been executed. It's time to call the main function!
 
 --]]
 

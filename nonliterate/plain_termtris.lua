@@ -78,7 +78,7 @@ local function call_fn_for_xy_in_piece(piece, callback, param)
 end
 
 local function draw_point(x, y, x_offset, color, point_char)
-  point_char = point_char or ' '
+  point_char = point_char or ' '  -- Space is the default point_char.
   if color then set_color(color) end
   -- Don't draw pieces when the game is paused.
   if point_char == ' ' and game_state == 'paused' then return end
@@ -86,7 +86,7 @@ local function draw_point(x, y, x_offset, color, point_char)
   stdscr:mvaddstr(y, x_offset + 2 * x + 1, point_char)
 end
 
--- Returns true iff the move was valid.
+-- Returns true if and only if the move was valid.
 local function set_moving_piece_if_valid(piece)
   -- Use values of moving_piece as defaults.
   for k, v in pairs(moving_piece) do
@@ -108,7 +108,7 @@ local function init()
   for s_index, s in ipairs(shapes) do
     shapes[s_index] = {}
     for rot_num = 1, 4 do
-      -- Rotate shape s by 90 degrees.
+      -- Set up new_shape as s rotated by 90 degrees.
       local new_shape = {}
       local x_end = #s[1] + 1  -- Chosen so that x_end - x is in [1, x_max].
       for x = 1, #s[1] do      -- Coords x & y are indexes for the new shape.
@@ -201,7 +201,7 @@ local function draw_screen(stats, colors, next_piece)
   -- Write 'paused' if the we're paused; draw the moving piece otherwise.
   if game_state == 'paused' then
     set_color(colors.text)
-    local x = x_margin + board_size.x - 1
+    local x = x_margin + board_size.x - 1  -- Slightly left of center.
     stdscr:mvaddstr(math.floor(board_size.y / 2), x, 'paused')
   else
     set_color(moving_piece.shape)
@@ -218,7 +218,6 @@ local function draw_screen(stats, colors, next_piece)
   end
 
   -- Draw the next piece.
-  set_color(colors.text)
   stdscr:mvaddstr(2, x_labels, '----------')
   stdscr:mvaddstr(7, x_labels, '---Next---')
   local piece = {shape = next_piece.shape, rot_num = 1, x = board_size.x + 5, y = 3}
@@ -252,7 +251,7 @@ local function lock_and_update_moving_piece(stats, fall, next_piece)
       stats.lines = stats.lines + 1
       if stats.lines % 10 == 0 then  -- Level up when lines is a multiple of 10.
         stats.level = stats.level + 1
-        fall.interval = fall.interval * 0.8
+        fall.interval = fall.interval * 0.8  -- The pieces will fall faster.
       end
       num_removed = num_removed + 1
     end
@@ -304,7 +303,7 @@ local function lower_piece_at_right_time(stats, fall, next_piece)
 
   local timeval = posix.gettimeofday()
   local timestamp = timeval.sec + timeval.usec * 1e-6
-  if fall.last_at == nil then fall.last_at = timestamp end
+  if fall.last_at == nil then fall.last_at = timestamp end  -- Happens at startup.
 
   -- Do nothing until it's been fall.interval seconds since the last fall.
   if timestamp - fall.last_at < fall.interval then return end
