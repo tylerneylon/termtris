@@ -80,7 +80,7 @@ the code. I'll mention a few things that may not be obvious:
 * An undefined table index is not an error, it just returns `nil`, which is falsy.
   For example, `a = {key1 = 'hi', key2 = 'there'}`; now `a.key3` is a valid
   expression with value `nil`.
-* A table `t` can be iterated over with the pattern
+* We can iterate over the keys and values of table `t` with the pattern
   `for k, v in pairs(t) do my_fn(k, v) end`. If `t` is treated as an array —
   if it has sequential integer keys starting at 1 — then `ipairs` can be used
   instead of `pairs` to ensure the keys are given in order:
@@ -90,10 +90,7 @@ Armed with that lightning flash of a Lua introduction, I believe you can underst
 all of the code. For a tad more depth, some crazy guy claims you can
 [learn the language in 15 minutes](http://tylerneylon.com/a/learn-lua/).
 
-## Making a tetris-like game
-
-Tetris is a simple yet absorbing game. Making a tetris-like game is a great exercise to
-understand some common structures in game code.
+## The Code
 
 The code we'll examine has a total of 10 functions, and a little over
 200 non-blank, non-comment lines of code:
