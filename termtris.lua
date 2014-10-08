@@ -880,7 +880,12 @@ we may render to. We want it to be smaller than `scr_width`.
 The `board_size.x + 2` value is the board width in cells,
 plus 2 border cells; this value is converted to characters by
 being doubled. The `+ 16` is meant to give 16 characters of room
-in which to render the player stats and next piece.
+in which to render the player stats and next piece. The updated
+screen dimensions are illustrated here:
+
+<center>
+![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/screen_dims.png)
+</center>
 
 --]]
 
