@@ -871,7 +871,7 @@ side of the board - which we call `x_labels`.
 These are constantly recalculated because it's cheap to do so
 and because the player may resize their terminal at any time.
 
-It may be worth explaining this line:
+It may be worth explaining this line ahead of time:
 
 * `local win_width = 2 * (board_size.x + 2) + 16`
 
@@ -883,9 +883,7 @@ being doubled. The `+ 16` is meant to give 16 characters of room
 in which to render the player stats and next piece. The updated
 screen dimensions are illustrated here:
 
-<center>
 ![](https://raw.githubusercontent.com/tylerneylon/termtris/master/img/screen_dims.png)
-</center>
 
 --]]
 
