@@ -990,8 +990,10 @@ That's the whole game.
 If you enjoyed this, you might like further exploration of Lua and
 my favorite 2D game engine, Löve, which adds modern 2D graphics capabilities
 to Lua. Here are some diving boards into more
-game-making fun:
+game-making goodness:
 
+* [Of Games and Code](https://medium.com/of-games-and-code/),
+  a Medium collection for game-makers
 * Another shameless plug for
   [learning Lua in 15 minutes](http://tylerneylon.com/a/learn-lua/).
 * The [Löve game engine home page](http://love2d.org/).
