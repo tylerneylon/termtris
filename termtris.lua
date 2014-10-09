@@ -1004,6 +1004,12 @@ game-making goodness:
 * [Mari0](http://stabyourself.net/mari0/), a combination of the original
   Super Mario Brothers plus Portal. Written in Lua + Löve.
 
-Have fun!
+## One More Thing
+
+I'm working on an original large-scale game called Apanga.
+If you're interested in independently-developed games, you
+could [send me your email addy](http://apanga.net/) to
+find out more about Apanga. I'm looking for early-stage
+testers and any help/interest would be greatly appreciated!
 
 --]]
