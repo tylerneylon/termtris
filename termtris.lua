@@ -45,7 +45,7 @@ higher-level installer like `brew` or `apt-get`, you might be able to use that
 to get `lua` and `luarocks`.
 From there:
 
-* `sudo luarocks install luaposix lcurses`
+* `sudo luarocks install luaposix`
 * `git clone https://github.com/tylerneylon/termtris.git`
 * `lua termtris/termtris.lua`
 
@@ -142,6 +142,10 @@ The `os.time()` function gives us the wall-clock time, but only in seconds.
 We'd like pieces to move faster than once per second! To achieve this, we
 import the `posix` library, which gives us access to more advanced posix
 functions, including higher-resolution timestamps.
+
+Both of these libraries are installed together by running
+the `luarocks install luaposix` command mentioned in the installation
+section above.
 
 Below are our module imports. This is the first "real"
 code block, unlike the non-running example code sections above.
