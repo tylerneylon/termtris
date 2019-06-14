@@ -38,14 +38,15 @@ then we'll dive into the code.
 
 You can play `termtris` on Mac OS X or linux/unix using a Lua interpreter.
 
-You can download Lua [here](http://www.lua.org/download.html)
-and the `luarocks` package manager [here](http://luarocks.org/en/Download).
-If you already have a
-higher-level installer like `brew` or `apt-get`, you might be able to use that
-to get `lua` and `luarocks`.
+On macOS, you can install Lua via `brew install lua`; for any OS,
+you can download Lua [here](http://www.lua.org/download.html).
+Download the `luarocks` package manager [here](http://luarocks.org/en/Download).
 From there:
 
 * `sudo luarocks install luaposix`
+* `sudo luarocks install lcurses`
+* Ensure [Lua can see your installed modules](https://github.com/luarocks/luarocks/wiki/Using-LuaRocks#rocks-trees-and-the-lua-libraries-path).
+  On macOS, you can do this via (from your shell) `eval $(luarocks path)`
 * `git clone https://github.com/tylerneylon/termtris.git`
 * `lua termtris/termtris.lua`
 
